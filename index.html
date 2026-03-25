@@ -7,815 +7,327 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Delso">
 <title>Delso — Cotizador</title>
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRGVsc28gQ290aXphZG9yIiwic2hvcnRfbmFtZSI6IkRlbHNvIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwYTBhMGEiLCJ0aGVtZV9jb2xvciI6IiMwYTBhMGEifQ==">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Playfair+Display:wght@600&display=swap');
-
-  :root {
-    --bg: #0a0a0a;
-    --surface: #141414;
-    --surface2: #1c1c1c;
-    --surface3: #242424;
-    --border: #2a2a2a;
-    --border-light: #333;
-    --text: #f0ede6;
-    --text-dim: #8a8680;
-    --text-mid: #b0aba3;
-    --accent: #c8a84e;
-    --accent-dim: rgba(200,168,78,0.15);
-    --accent-glow: rgba(200,168,78,0.08);
-    --danger: #c75050;
-    --danger-dim: rgba(199,80,80,0.15);
-    --success: #4a9e6e;
-    --success-dim: rgba(74,158,110,0.15);
-    --radius: 14px;
-    --radius-sm: 10px;
-    --safe-top: env(safe-area-inset-top, 20px);
-    --safe-bottom: env(safe-area-inset-bottom, 20px);
-  }
-
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
-  body {
-    font-family:'DM Sans',sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    min-height:100dvh;
-    overflow-x:hidden;
-    font-size:15px;
-    line-height:1.5;
-  }
-
-  /* ── NAV ── */
-  .tab-bar {
-    position:fixed; bottom:0; left:0; right:0;
-    background:rgba(10,10,10,0.92);
-    backdrop-filter:blur(20px);
-    -webkit-backdrop-filter:blur(20px);
-    display:flex;
-    padding: 6px 12px calc(var(--safe-bottom) + 4px);
-    border-top:1px solid var(--border);
-    z-index:100;
-  }
-  .tab-btn {
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
-    background:none; border:none; color:var(--text-dim);
-    font:500 10px 'DM Sans',sans-serif;
-    padding:8px 4px 4px;
-    cursor:pointer; transition:color .2s;
-  }
-  .tab-btn.active { color:var(--accent); }
-  .tab-btn svg { width:22px; height:22px; }
-
-  /* ── PAGES ── */
-  .page { display:none; padding: calc(var(--safe-top) + 16px) 16px calc(80px + var(--safe-bottom)) 16px; }
-  .page.active { display:block; animation: fadeUp .3s ease; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
-
-  .page-title {
-    font-family:'Playfair Display',serif;
-    font-size:28px; font-weight:600;
-    margin-bottom:4px;
-    background:linear-gradient(135deg,var(--text),var(--accent));
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  }
-  .page-subtitle { color:var(--text-dim); font-size:13px; margin-bottom:20px; }
-
-  /* ── CARDS ── */
-  .card {
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:16px;
-    margin-bottom:12px;
-  }
-  .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  .card-label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-dim); font-weight:500; }
-
-  /* ── FORMS ── */
-  .field { margin-bottom:14px; }
-  .field label { display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-weight:500; letter-spacing:.5px; text-transform:uppercase; }
-  .field input, .field select, .field textarea {
-    width:100%; background:var(--surface2); border:1px solid var(--border);
-    border-radius:var(--radius-sm); padding:12px 14px;
-    color:var(--text); font:400 15px 'DM Sans',sans-serif;
-    outline:none; transition:border-color .2s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--accent); }
-  .field select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8680'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
-
-  /* ── BUTTONS ── */
-  .btn {
-    display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    padding:12px 20px; border-radius:var(--radius-sm);
-    font:500 14px 'DM Sans',sans-serif;
-    border:none; cursor:pointer; transition:all .2s;
-    width:100%;
-  }
-  .btn-primary { background:var(--accent); color:#0a0a0a; }
-  .btn-primary:active { transform:scale(.97); filter:brightness(1.1); }
-  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-  .btn-secondary:active { background:var(--surface3); }
-  .btn-danger { background:var(--danger-dim); color:var(--danger); }
-  .btn-sm { padding:8px 14px; font-size:13px; width:auto; }
-  .btn-icon { width:36px; height:36px; padding:0; border-radius:50%; flex-shrink:0; }
-
-  /* ── STEPPER ── */
-  .stepper { display:flex; align-items:center; gap:0; }
-  .stepper button {
-    width:40px; height:40px; border:1px solid var(--border);
-    background:var(--surface2); color:var(--text); font-size:20px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:background .15s;
-  }
-  .stepper button:first-child { border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
-  .stepper button:last-child { border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
-  .stepper button:active { background:var(--surface3); }
-  .stepper .stepper-val {
-    width:56px; height:40px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-    background:var(--surface); display:flex; align-items:center; justify-content:center;
-    font:500 16px 'DM Sans',sans-serif; color:var(--text);
-  }
-
-  /* ── LINE ITEMS ── */
-  .line-item {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:10px 0;
-    border-bottom:1px solid var(--border);
-  }
-  .line-item:last-child { border-bottom:none; }
-  .line-item-name { font-size:14px; color:var(--text-mid); flex:1; }
-  .line-item-val { font-size:14px; font-weight:500; color:var(--text); min-width:80px; text-align:right; }
-
-  .total-row {
-    display:flex; justify-content:space-between; align-items:baseline;
-    padding:14px 0 4px; margin-top:4px;
-    border-top:2px solid var(--accent);
-  }
-  .total-label { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); font-weight:500; }
-  .total-val { font-family:'Playfair Display',serif; font-size:26px; color:var(--accent); }
-
-  /* ── EXTRAS LIST ── */
-  .extra-toggle {
-    display:flex; align-items:center; gap:12px;
-    padding:10px 0; border-bottom:1px solid var(--border);
-    cursor:pointer;
-  }
-  .extra-toggle:last-child { border-bottom:none; }
-  .extra-check {
-    width:22px; height:22px; border-radius:6px; border:2px solid var(--border);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    transition:all .2s;
-  }
-  .extra-check.checked { background:var(--accent); border-color:var(--accent); }
-  .extra-check svg { opacity:0; transition:opacity .2s; }
-  .extra-check.checked svg { opacity:1; }
-  .extra-info { flex:1; }
-  .extra-name { font-size:14px; color:var(--text); }
-  .extra-price { font-size:12px; color:var(--text-dim); }
-
-  /* ── QUOTE HISTORY ── */
-  .quote-card {
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    padding:14px 16px;
-    margin-bottom:10px;
-    cursor:pointer;
-    transition:border-color .2s;
-  }
-  .quote-card:active { border-color:var(--accent); }
-  .quote-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-  .quote-card-client { font-weight:500; font-size:15px; }
-  .quote-card-total { font-weight:700; color:var(--accent); font-size:15px; }
-  .quote-card-bottom { font-size:12px; color:var(--text-dim); }
-
-  .empty-state { text-align:center; padding:40px 20px; }
-  .empty-state svg { width:48px; height:48px; color:var(--text-dim); margin-bottom:12px; opacity:.4; }
-  .empty-state p { color:var(--text-dim); font-size:14px; }
-
-  /* ── CONFIG ITEM ── */
-  .config-item {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:12px 0; border-bottom:1px solid var(--border);
-  }
-  .config-item:last-child { border-bottom:none; }
-  .config-item-label { font-size:14px; color:var(--text-mid); flex:1; padding-right:12px; }
-  .config-item input {
-    width:100px; text-align:right;
-    background:var(--surface2); border:1px solid var(--border);
-    border-radius:var(--radius-sm); padding:8px 10px;
-    color:var(--text); font:500 14px 'DM Sans',sans-serif;
-    outline:none;
-  }
-  .config-item input:focus { border-color:var(--accent); }
-
-  /* ── MODAL ── */
-  .modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,.7);
-    z-index:200; display:none; align-items:flex-end; justify-content:center;
-    animation: fadeIn .2s;
-  }
-  .modal-overlay.active { display:flex; }
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-  .modal {
-    background:var(--surface);
-    border-radius:20px 20px 0 0;
-    padding:24px 20px calc(var(--safe-bottom) + 20px);
-    width:100%; max-width:500px;
-    max-height:85dvh; overflow-y:auto;
-    animation: slideUp .3s ease;
-  }
-  @keyframes slideUp { from{transform:translateY(100%)} to{transform:none} }
-  .modal-handle { width:36px; height:4px; background:var(--border-light); border-radius:2px; margin:0 auto 16px; }
-  .modal-title { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:16px; }
-
-  /* ── SHARE PREVIEW ── */
-  .share-preview {
-    background:#fff; color:#111; border-radius:var(--radius);
-    padding:24px; margin-bottom:16px; font-size:13px; line-height:1.7;
-  }
-  .share-preview h2 { font-family:'Playfair Display',serif; font-size:18px; margin-bottom:4px; color:#111; }
-  .share-preview .sp-sub { color:#666; font-size:11px; margin-bottom:14px; }
-  .share-preview table { width:100%; border-collapse:collapse; margin-bottom:12px; }
-  .share-preview th { text-align:left; font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; padding:6px 0; border-bottom:2px solid #eee; }
-  .share-preview td { padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
-  .share-preview td:last-child { text-align:right; font-weight:500; }
-  .share-preview .sp-total { display:flex; justify-content:space-between; font-size:16px; font-weight:700; padding-top:8px; border-top:2px solid #c8a84e; }
-
-  /* ── BADGE ── */
-  .badge { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:500; }
-  .badge-gold { background:var(--accent-dim); color:var(--accent); }
-
-  /* ── ANIMATIONS ── */
-  .stagger > * { opacity:0; animation: fadeUp .4s ease forwards; }
-  .stagger > *:nth-child(1){animation-delay:.05s}
-  .stagger > *:nth-child(2){animation-delay:.1s}
-  .stagger > *:nth-child(3){animation-delay:.12s}
-  .stagger > *:nth-child(4){animation-delay:.16s}
-  .stagger > *:nth-child(5){animation-delay:.2s}
-  .stagger > *:nth-child(6){animation-delay:.24s}
-  .stagger > *:nth-child(7){animation-delay:.28s}
-  .stagger > *:nth-child(8){animation-delay:.32s}
-
-  .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width:0; }
+  :root{--bg:#0a0a0a;--surface:#141414;--surface2:#1c1c1c;--surface3:#242424;--border:#2a2a2a;--border-light:#333;--text:#f0ede6;--text-dim:#8a8680;--text-mid:#b0aba3;--accent:#c8a84e;--accent-dim:rgba(200,168,78,.15);--danger:#c75050;--danger-dim:rgba(199,80,80,.15);--radius:14px;--radius-sm:10px;--safe-top:env(safe-area-inset-top,20px);--safe-bottom:env(safe-area-inset-bottom,20px)}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;font-size:15px;line-height:1.5}
+  .tab-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;padding:6px 12px calc(var(--safe-bottom) + 4px);border-top:1px solid var(--border);z-index:100}
+  .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-dim);font:500 10px 'DM Sans',sans-serif;padding:8px 4px 4px;cursor:pointer;transition:color .2s}
+  .tab-btn.active{color:var(--accent)}.tab-btn svg{width:22px;height:22px}
+  .page{display:none;padding:calc(var(--safe-top) + 16px) 16px calc(80px + var(--safe-bottom)) 16px}
+  .page.active{display:block;animation:fadeUp .3s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .page-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:600;margin-bottom:4px;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .page-subtitle{color:var(--text-dim);font-size:13px;margin-bottom:20px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .card-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);font-weight:500}
+  .field{margin-bottom:14px}.field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+  .field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font:400 15px 'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:var(--radius-sm);font:500 14px 'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .2s;width:100%}
+  .btn-primary{background:var(--accent);color:#0a0a0a}.btn-primary:active{transform:scale(.97);filter:brightness(1.1)}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn-secondary:active{background:var(--surface3)}
+  .btn-danger{background:var(--danger-dim);color:var(--danger)}.btn-sm{padding:8px 14px;font-size:13px;width:auto}
+  .btn-icon{width:36px;height:36px;padding:0;border-radius:50%;flex-shrink:0}
+  .stepper{display:flex;align-items:center}
+  .stepper button{width:40px;height:40px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+  .stepper button:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}.stepper button:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+  .stepper button:active{background:var(--surface3)}
+  .stepper .stepper-val{width:56px;height:40px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font:500 16px 'DM Sans',sans-serif;color:var(--text)}
+  .line-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}.line-item:last-child{border-bottom:none}
+  .line-item-name{font-size:14px;color:var(--text-mid);flex:1}.line-item-val{font-size:14px;font-weight:500;color:var(--text);min-width:80px;text-align:right}
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 4px;margin-top:4px;border-top:2px solid var(--accent)}
+  .total-label{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);font-weight:500}
+  .total-val{font-family:'Playfair Display',serif;font-size:26px;color:var(--accent)}
+  .extra-toggle{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}.extra-toggle:last-child{border-bottom:none}
+  .extra-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+  .extra-check.checked{background:var(--accent);border-color:var(--accent)}.extra-check svg{opacity:0;transition:opacity .2s}.extra-check.checked svg{opacity:1}
+  .extra-info{flex:1}.extra-name{font-size:14px;color:var(--text)}.extra-price{font-size:12px;color:var(--text-dim)}
+  .quote-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
+  .quote-card:active{border-color:var(--accent)}.quote-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .quote-card-client{font-weight:500;font-size:15px}.quote-card-total{font-weight:700;color:var(--accent);font-size:15px}.quote-card-bottom{font-size:12px;color:var(--text-dim)}
+  .empty-state{text-align:center;padding:40px 20px}.empty-state svg{width:48px;height:48px;color:var(--text-dim);margin-bottom:12px;opacity:.4}.empty-state p{color:var(--text-dim);font-size:14px}
+  .config-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}.config-item:last-child{border-bottom:none}
+  .config-item-label{font-size:14px;color:var(--text-mid);flex:1;padding-right:12px}
+  .config-item input{width:100px;text-align:right;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font:500 14px 'DM Sans',sans-serif;outline:none}
+  .config-item input:focus{border-color:var(--accent)}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-end;justify-content:center;animation:fadeIn .2s}
+  .modal-overlay.active{display:flex}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px calc(var(--safe-bottom) + 20px);width:100%;max-width:500px;max-height:85dvh;overflow-y:auto;animation:slideUp .3s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+  .modal-handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 16px}.modal-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:16px}
+  .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:500}.badge-gold{background:var(--accent-dim);color:var(--accent)}
+  .stagger > *{opacity:0;animation:fadeUp .4s ease forwards}
+  .stagger > *:nth-child(1){animation-delay:.05s}.stagger > *:nth-child(2){animation-delay:.1s}.stagger > *:nth-child(3){animation-delay:.12s}.stagger > *:nth-child(4){animation-delay:.16s}.stagger > *:nth-child(5){animation-delay:.2s}.stagger > *:nth-child(6){animation-delay:.24s}.stagger > *:nth-child(7){animation-delay:.28s}.stagger > *:nth-child(8){animation-delay:.32s}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}::-webkit-scrollbar{width:0}
+  .toast{position:fixed;top:calc(var(--safe-top) + 12px);left:50%;transform:translateX(-50%) translateY(-100px);background:var(--accent);color:#0a0a0a;padding:10px 20px;border-radius:var(--radius-sm);font:500 14px 'DM Sans',sans-serif;z-index:300;transition:transform .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4)}.toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 
-<!-- ═══════════ PAGE: COTIZAR ═══════════ -->
+<!-- PAGE: COTIZAR -->
 <div id="page-quote" class="page active">
   <div class="stagger">
     <h1 class="page-title">Nueva Cotización</h1>
     <p class="page-subtitle">Configura el ascensor y genera la propuesta</p>
-
     <div class="card">
-      <div class="card-header">
-        <span class="card-label">Datos del Cliente</span>
-      </div>
-      <div class="field">
-        <label>Nombre / Empresa</label>
-        <input id="q-client" type="text" placeholder="Ej: Edificio Los Robles">
-      </div>
+      <div class="card-header"><span class="card-label">Datos del Cliente</span></div>
+      <div class="field"><label>Nombre / Empresa</label><input id="q-client" type="text" placeholder="Ej: Edificio Los Robles"></div>
       <div class="row-2">
-        <div class="field">
-          <label>Teléfono</label>
-          <input id="q-phone" type="tel" placeholder="Opcional">
-        </div>
-        <div class="field">
-          <label>Fecha</label>
-          <input id="q-date" type="date">
-        </div>
+        <div class="field"><label>Teléfono</label><input id="q-phone" type="tel" placeholder="Opcional"></div>
+        <div class="field"><label>Fecha</label><input id="q-date" type="date"></div>
       </div>
-      <div class="field">
-        <label>Notas</label>
-        <textarea id="q-notes" rows="2" placeholder="Observaciones..."></textarea>
-      </div>
+      <div class="field"><label>Notas</label><textarea id="q-notes" rows="2" placeholder="Observaciones..."></textarea></div>
     </div>
-
     <div class="card">
-      <div class="card-header">
-        <span class="card-label">Ascensor</span>
-        <span class="badge badge-gold" id="badge-paradas">2 paradas</span>
+      <div class="card-header"><span class="card-label">Ascensor</span><span class="badge badge-gold" id="badge-paradas">2 paradas</span></div>
+      <div class="field"><label>Número de Paradas</label>
+        <div class="stepper"><button onclick="changeStops(-1)">−</button><div class="stepper-val" id="stop-count">2</div><button onclick="changeStops(1)">+</button></div>
       </div>
-      <div class="field">
-        <label>Número de Paradas</label>
-        <div class="stepper">
-          <button onclick="changeStops(-1)">−</button>
-          <div class="stepper-val" id="stop-count">2</div>
-          <button onclick="changeStops(1)">+</button>
-        </div>
-      </div>
-      <div class="line-item">
-        <span class="line-item-name">Ascensor base</span>
-        <span class="line-item-val" id="li-base">$15,000</span>
-      </div>
-      <div class="line-item">
-        <span class="line-item-name">Paradas adicionales</span>
-        <span class="line-item-val" id="li-extra-stops">$0</span>
-      </div>
-      <div class="line-item">
-        <span class="line-item-name">Instalación</span>
-        <span class="line-item-val" id="li-install">$2,000</span>
-      </div>
+      <div class="line-item"><span class="line-item-name">Ascensor base</span><span class="line-item-val" id="li-base">$15,000</span></div>
+      <div class="line-item"><span class="line-item-name">Paradas adicionales</span><span class="line-item-val" id="li-extra-stops">$0</span></div>
+      <div class="line-item"><span class="line-item-name">Instalación</span><span class="line-item-val" id="li-install">$2,000</span></div>
     </div>
-
     <div class="card">
-      <div class="card-header">
-        <span class="card-label">Artículos Adicionales</span>
-        <button class="btn btn-secondary btn-sm" onclick="openModal('modal-add-extra')" style="width:auto">+ Agregar</button>
-      </div>
+      <div class="card-header"><span class="card-label">Artículos Adicionales</span><button class="btn btn-secondary btn-sm" onclick="openModal('modal-add-extra')" style="width:auto">+ Agregar</button></div>
       <div id="extras-list"></div>
     </div>
-
     <div class="card">
       <div class="card-header"><span class="card-label">Resumen</span></div>
       <div id="summary-lines"></div>
-      <div class="total-row">
-        <span class="total-label">Total</span>
-        <span class="total-val" id="grand-total">$17,000</span>
-      </div>
+      <div class="total-row"><span class="total-label">Total</span><span class="total-val" id="grand-total">$17,000</span></div>
     </div>
-
     <div class="row-2" style="margin-top:4px">
-      <button class="btn btn-secondary" onclick="resetQuote()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 3v9h9"/></svg>
-        Limpiar
-      </button>
-      <button class="btn btn-primary" onclick="saveAndPreview()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
-        Cotizar
-      </button>
+      <button class="btn btn-secondary" onclick="resetQuote()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 3v9h9"/></svg>Limpiar</button>
+      <button class="btn btn-primary" onclick="saveAndExportPDF()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>Exportar PDF</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════ PAGE: HISTORIAL ═══════════ -->
+<!-- PAGE: HISTORIAL -->
 <div id="page-history" class="page">
   <h1 class="page-title">Historial</h1>
   <p class="page-subtitle">Cotizaciones guardadas</p>
   <div id="history-list"></div>
 </div>
 
-<!-- ═══════════ PAGE: CONFIGURACIÓN ═══════════ -->
+<!-- PAGE: CONFIGURACIÓN -->
 <div id="page-config" class="page">
   <div class="stagger">
     <h1 class="page-title">Configuración</h1>
     <p class="page-subtitle">Modifica precios base y artículos</p>
-
     <div class="card">
       <div class="card-header"><span class="card-label">Precios del Ascensor</span></div>
-      <div class="config-item">
-        <span class="config-item-label">Precio base (2 paradas)</span>
-        <input id="cfg-base" type="number" inputmode="decimal">
-      </div>
-      <div class="config-item">
-        <span class="config-item-label">Precio por parada adicional</span>
-        <input id="cfg-per-stop" type="number" inputmode="decimal">
-      </div>
+      <div class="config-item"><span class="config-item-label">Precio base (2 paradas)</span><input id="cfg-base" type="number" inputmode="decimal"></div>
+      <div class="config-item"><span class="config-item-label">Precio por parada adicional</span><input id="cfg-per-stop" type="number" inputmode="decimal"></div>
     </div>
-
     <div class="card">
       <div class="card-header"><span class="card-label">Instalación por Parada</span></div>
-      <div class="config-item">
-        <span class="config-item-label">Hasta 4 paradas</span>
-        <input id="cfg-inst-low" type="number" inputmode="decimal">
-      </div>
-      <div class="config-item">
-        <span class="config-item-label">5 paradas</span>
-        <input id="cfg-inst-mid" type="number" inputmode="decimal">
-      </div>
-      <div class="config-item">
-        <span class="config-item-label">6+ paradas</span>
-        <input id="cfg-inst-high" type="number" inputmode="decimal">
-      </div>
+      <div class="config-item"><span class="config-item-label">Hasta 4 paradas</span><input id="cfg-inst-low" type="number" inputmode="decimal"></div>
+      <div class="config-item"><span class="config-item-label">5 paradas</span><input id="cfg-inst-mid" type="number" inputmode="decimal"></div>
+      <div class="config-item"><span class="config-item-label">6+ paradas</span><input id="cfg-inst-high" type="number" inputmode="decimal"></div>
     </div>
-
     <div class="card">
-      <div class="card-header">
-        <span class="card-label">Artículos Adicionales</span>
-        <button class="btn btn-secondary btn-sm" onclick="openModal('modal-new-article')" style="width:auto">+ Nuevo</button>
-      </div>
+      <div class="card-header"><span class="card-label">Artículos Adicionales</span><button class="btn btn-secondary btn-sm" onclick="openModal('modal-new-article')" style="width:auto">+ Nuevo</button></div>
       <div id="config-extras-list"></div>
     </div>
-
-    <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:8px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
-      Guardar Configuración
-    </button>
+    <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>Guardar Configuración</button>
   </div>
 </div>
 
-<!-- ═══════════ TAB BAR ═══════════ -->
+<!-- TAB BAR -->
 <nav class="tab-bar">
-  <button class="tab-btn active" onclick="switchPage('quote')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
-    Cotizar
-  </button>
-  <button class="tab-btn" onclick="switchPage('history')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-    Historial
-  </button>
-  <button class="tab-btn" onclick="switchPage('config')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    Config
-  </button>
+  <button class="tab-btn active" onclick="switchPage('quote')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>Cotizar</button>
+  <button class="tab-btn" onclick="switchPage('history')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Historial</button>
+  <button class="tab-btn" onclick="switchPage('config')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Config</button>
 </nav>
 
-<!-- ═══════════ MODAL: Add Extra to Quote ═══════════ -->
-<div class="modal-overlay" id="modal-add-extra">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Agregar Artículo</div>
-    <div class="field">
-      <label>Nombre</label>
-      <input id="extra-name" type="text" placeholder="Ej: Cabina moderna">
-    </div>
-    <div class="field">
-      <label>Precio ($)</label>
-      <input id="extra-price" type="number" inputmode="decimal" placeholder="700">
-    </div>
-    <div class="row-2">
-      <button class="btn btn-secondary" onclick="closeModal('modal-add-extra')">Cancelar</button>
-      <button class="btn btn-primary" onclick="addExtraToQuote()">Agregar</button>
-    </div>
-  </div>
-</div>
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-extra"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Agregar Artículo</div>
+  <div class="field"><label>Nombre</label><input id="extra-name" type="text" placeholder="Ej: Cabina moderna"></div>
+  <div class="field"><label>Precio ($)</label><input id="extra-price" type="number" inputmode="decimal" placeholder="700"></div>
+  <div class="row-2"><button class="btn btn-secondary" onclick="closeModal('modal-add-extra')">Cancelar</button><button class="btn btn-primary" onclick="addExtraToQuote()">Agregar</button></div>
+</div></div>
 
-<!-- ═══════════ MODAL: New Article for Config ═══════════ -->
-<div class="modal-overlay" id="modal-new-article">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Nuevo Artículo</div>
-    <div class="field">
-      <label>Nombre del artículo</label>
-      <input id="new-art-name" type="text" placeholder="Ej: Puerta automática">
-    </div>
-    <div class="field">
-      <label>Precio ($)</label>
-      <input id="new-art-price" type="number" inputmode="decimal" placeholder="500">
-    </div>
-    <div class="row-2">
-      <button class="btn btn-secondary" onclick="closeModal('modal-new-article')">Cancelar</button>
-      <button class="btn btn-primary" onclick="addNewArticle()">Guardar</button>
-    </div>
-  </div>
-</div>
+<div class="modal-overlay" id="modal-new-article"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Nuevo Artículo</div>
+  <div class="field"><label>Nombre del artículo</label><input id="new-art-name" type="text" placeholder="Ej: Puerta automática"></div>
+  <div class="field"><label>Precio ($)</label><input id="new-art-price" type="number" inputmode="decimal" placeholder="500"></div>
+  <div class="row-2"><button class="btn btn-secondary" onclick="closeModal('modal-new-article')">Cancelar</button><button class="btn btn-primary" onclick="addNewArticle()">Guardar</button></div>
+</div></div>
 
-<!-- ═══════════ MODAL: Share/Preview ═══════════ -->
-<div class="modal-overlay" id="modal-share">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Cotización Generada</div>
-    <div id="share-preview-container"></div>
-    <div class="row-2">
-      <button class="btn btn-secondary" onclick="closeModal('modal-share')">Cerrar</button>
-      <button class="btn btn-primary" onclick="shareQuote()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-        Compartir
-      </button>
-    </div>
+<div class="modal-overlay" id="modal-view-quote"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Detalle</div>
+  <div id="view-quote-container"></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn btn-danger btn-sm" onclick="deleteQuote()" style="flex:1">Eliminar</button>
+    <button class="btn btn-primary btn-sm" onclick="reExportPDF()" style="flex:1">PDF</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-view-quote')" style="flex:1">Cerrar</button>
   </div>
-</div>
+</div></div>
 
-<!-- ═══════════ MODAL: View Saved Quote ═══════════ -->
-<div class="modal-overlay" id="modal-view-quote">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Detalle</div>
-    <div id="view-quote-container"></div>
-    <div class="row-2" style="margin-top:12px">
-      <button class="btn btn-danger btn-sm" id="btn-delete-quote" onclick="deleteQuote()">Eliminar</button>
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-view-quote')">Cerrar</button>
-    </div>
-  </div>
-</div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <script>
-// ═══════════ STATE ═══════════
-const DEFAULT_CONFIG = {
-  basePrice: 15000,
-  perStop: 600,
-  instLow: 1000,   // <=4 paradas
-  instMid: 800,    // 5 paradas
-  instHigh: 500,   // 6+ paradas
-  articles: [
-    { id: 'a1', name: 'Cabina moderna', price: 700 },
-    { id: 'a2', name: 'Puerta automática', price: 1200 },
-    { id: 'a3', name: 'Espejo panorámico', price: 350 },
-    { id: 'a4', name: 'Iluminación LED', price: 250 },
-    { id: 'a5', name: 'Piso de acero inoxidable', price: 400 },
-    { id: 'a6', name: 'Sistema de emergencia', price: 800 },
-  ]
-};
+const LOGO_B64='data:image/jpeg;base64,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';
 
-let config = JSON.parse(localStorage.getItem('delso_config')) || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-let quotes = JSON.parse(localStorage.getItem('delso_quotes')) || [];
-let stops = 2;
-let selectedExtras = {}; // { id: { name, price } }
-let viewingQuoteId = null;
+const DEFAULT_CONFIG={basePrice:15000,perStop:600,instLow:1000,instMid:800,instHigh:500,articles:[
+  {id:'a1',name:'Cabina moderna',price:700},{id:'a2',name:'Puerta automática',price:1200},
+  {id:'a3',name:'Espejo panorámico',price:350},{id:'a4',name:'Iluminación LED',price:250},
+  {id:'a5',name:'Piso de acero inoxidable',price:400},{id:'a6',name:'Sistema de emergencia',price:800}
+]};
 
-// ═══════════ NAVIGATION ═══════════
-function switchPage(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelectorAll('.tab-btn')[['quote','history','config'].indexOf(page)].classList.add('active');
-  if (page === 'history') renderHistory();
-  if (page === 'config') loadConfig();
-}
+let config=JSON.parse(localStorage.getItem('delso_config'))||JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let quotes=JSON.parse(localStorage.getItem('delso_quotes'))||[];
+let stops=2,selectedExtras={},viewingQuoteId=null;
 
-// ═══════════ MODAL ═══════════
-function openModal(id) { document.getElementById(id).classList.add('active'); }
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
-});
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function switchPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.tab-btn')[['quote','history','config'].indexOf(p)].classList.add('active');if(p==='history')renderHistory();if(p==='config')loadConfig()}
+function openModal(id){document.getElementById(id).classList.add('active')}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active')})});
+const fmt=n=>'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
+function calcBase(){return config.basePrice+Math.max(0,stops-2)*config.perStop}
+function calcInstall(){let r=stops<=4?config.instLow:stops===5?config.instMid:config.instHigh;return stops*r}
+function calcExtrasTotal(){return Object.values(selectedExtras).reduce((s,e)=>s+Number(e.price),0)}
+function calcTotal(){return calcBase()+calcInstall()+calcExtrasTotal()}
 
-// ═══════════ FORMAT ═══════════
-const fmt = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
-// ═══════════ CALCULATIONS ═══════════
-function calcBase() {
-  const extra = Math.max(0, stops - 2) * config.perStop;
-  return config.basePrice + extra;
-}
-
-function calcInstall() {
-  let rate;
-  if (stops <= 4) rate = config.instLow;
-  else if (stops === 5) rate = config.instMid;
-  else rate = config.instHigh;
-  return stops * rate;
-}
-
-function calcExtrasTotal() {
-  return Object.values(selectedExtras).reduce((s, e) => s + Number(e.price), 0);
-}
-
-function calcTotal() {
-  return calcBase() + calcInstall() + calcExtrasTotal();
-}
-
-// ═══════════ UPDATE UI ═══════════
-function update() {
-  document.getElementById('stop-count').textContent = stops;
-  document.getElementById('badge-paradas').textContent = stops + ' parada' + (stops !== 1 ? 's' : '');
-
-  const base = config.basePrice;
-  const extraStops = Math.max(0, stops - 2) * config.perStop;
-  const install = calcInstall();
-
-  document.getElementById('li-base').textContent = fmt(base);
-  document.getElementById('li-extra-stops').textContent = fmt(extraStops);
-  document.getElementById('li-install').textContent = fmt(install);
-
-  // Summary
-  let html = '';
-  html += `<div class="line-item"><span class="line-item-name">Ascensor (${stops} paradas)</span><span class="line-item-val">${fmt(calcBase())}</span></div>`;
-  html += `<div class="line-item"><span class="line-item-name">Instalación</span><span class="line-item-val">${fmt(install)}</span></div>`;
-  for (const [id, ex] of Object.entries(selectedExtras)) {
-    html += `<div class="line-item"><span class="line-item-name">${ex.name}</span><span class="line-item-val">${fmt(ex.price)}</span></div>`;
-  }
-  document.getElementById('summary-lines').innerHTML = html;
-  document.getElementById('grand-total').textContent = fmt(calcTotal());
-
+function update(){
+  document.getElementById('stop-count').textContent=stops;
+  document.getElementById('badge-paradas').textContent=stops+' parada'+(stops!==1?'s':'');
+  document.getElementById('li-base').textContent=fmt(config.basePrice);
+  document.getElementById('li-extra-stops').textContent=fmt(Math.max(0,stops-2)*config.perStop);
+  document.getElementById('li-install').textContent=fmt(calcInstall());
+  let h='';
+  h+=`<div class="line-item"><span class="line-item-name">Ascensor (${stops} paradas)</span><span class="line-item-val">${fmt(calcBase())}</span></div>`;
+  h+=`<div class="line-item"><span class="line-item-name">Instalación</span><span class="line-item-val">${fmt(calcInstall())}</span></div>`;
+  for(const ex of Object.values(selectedExtras))h+=`<div class="line-item"><span class="line-item-name">${ex.name}</span><span class="line-item-val">${fmt(ex.price)}</span></div>`;
+  document.getElementById('summary-lines').innerHTML=h;
+  document.getElementById('grand-total').textContent=fmt(calcTotal());
   renderExtrasSelector();
 }
+function changeStops(d){stops=Math.max(2,stops+d);update()}
 
-function changeStops(d) {
-  stops = Math.max(2, stops + d);
-  update();
+function renderExtrasSelector(){
+  const l=document.getElementById('extras-list');
+  if(!config.articles.length){l.innerHTML='<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos.</p>';return}
+  l.innerHTML=config.articles.map(a=>{const c=selectedExtras[a.id]?'checked':'';return`<div class="extra-toggle" onclick="toggleExtra('${a.id}')"><div class="extra-check ${c}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div><div class="extra-info"><div class="extra-name">${a.name}</div><div class="extra-price">${fmt(a.price)}</div></div></div>`}).join('')}
+
+function toggleExtra(id){if(selectedExtras[id])delete selectedExtras[id];else{const a=config.articles.find(x=>x.id===id);if(a)selectedExtras[id]={name:a.name,price:a.price}}update()}
+
+function addExtraToQuote(){const n=document.getElementById('extra-name').value.trim(),p=parseFloat(document.getElementById('extra-price').value);if(!n||isNaN(p))return;selectedExtras['custom_'+Date.now()]={name:n,price:p};document.getElementById('extra-name').value='';document.getElementById('extra-price').value='';closeModal('modal-add-extra');update()}
+
+function resetQuote(){stops=2;selectedExtras={};document.getElementById('q-client').value='';document.getElementById('q-phone').value='';document.getElementById('q-notes').value='';document.getElementById('q-date').value=new Date().toISOString().slice(0,10);update()}
+
+function buildQuoteData(){
+  const lines=[];
+  lines.push({name:`Ascensor (${stops} paradas)`,amount:calcBase()});
+  lines.push({name:'Instalación',amount:calcInstall()});
+  for(const ex of Object.values(selectedExtras))lines.push({name:ex.name,amount:Number(ex.price)});
+  return{id:'q_'+Date.now(),client:document.getElementById('q-client').value.trim()||'Sin nombre',phone:document.getElementById('q-phone').value.trim(),date:document.getElementById('q-date').value,notes:document.getElementById('q-notes').value.trim(),stops,lines,total:calcTotal(),createdAt:new Date().toISOString()}
 }
 
-// ═══════════ EXTRAS SELECTOR ═══════════
-function renderExtrasSelector() {
-  const list = document.getElementById('extras-list');
-  if (!config.articles.length) {
-    list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos. Agrega desde Configuración.</p>';
-    return;
-  }
-  list.innerHTML = config.articles.map(a => {
-    const checked = selectedExtras[a.id] ? 'checked' : '';
-    return `
-      <div class="extra-toggle" onclick="toggleExtra('${a.id}')">
-        <div class="extra-check ${checked}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
-        <div class="extra-info">
-          <div class="extra-name">${a.name}</div>
-          <div class="extra-price">${fmt(a.price)}</div>
-        </div>
-      </div>`;
-  }).join('');
+// ═══════════ PDF ═══════════
+function generatePDF(q){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,H=297,ml=20,mr=20,cw=W-ml-mr;
+  let y=0;
+
+  // Header
+  doc.setFillColor(30,30,30);doc.rect(0,0,W,44,'F');
+  try{doc.addImage(LOGO_B64,'JPEG',ml,8,48,14)}catch(e){}
+  doc.setFontSize(8);doc.setTextColor(160,160,160);doc.text('Venta e Instalación de Ascensores',ml,30);
+  doc.setFontSize(9);doc.setTextColor(200,168,78);doc.text('COTIZACIÓN',W-mr,14,{align:'right'});
+  doc.setFontSize(8);doc.setTextColor(220,220,220);
+  doc.text('#'+q.id.replace('q_','').slice(-6).toUpperCase(),W-mr,20,{align:'right'});
+  doc.text(q.date||'Sin fecha',W-mr,26,{align:'right'});
+  y=54;
+
+  // Client
+  doc.setFillColor(245,243,238);doc.roundedRect(ml,y,cw,24,3,3,'F');
+  doc.setFontSize(8);doc.setTextColor(120,120,120);doc.text('CLIENTE',ml+6,y+7);
+  doc.setFontSize(11);doc.setTextColor(30,30,30);doc.text(q.client,ml+6,y+14);
+  if(q.phone){doc.setFontSize(8);doc.setTextColor(100,100,100);doc.text('Tel: '+q.phone,ml+6,y+20)}
+  y+=34;
+
+  // Table header
+  doc.setFillColor(200,168,78);doc.roundedRect(ml,y,cw,10,2,2,'F');
+  doc.setFontSize(9);doc.setTextColor(255,255,255);
+  doc.text('DESCRIPCIÓN',ml+6,y+7);doc.text('MONTO',W-mr-6,y+7,{align:'right'});
+  y+=14;
+
+  // Rows
+  q.lines.forEach((line,i)=>{
+    if(i%2===0){doc.setFillColor(250,249,246);doc.rect(ml,y-4,cw,10,'F')}
+    doc.setFontSize(10);doc.setTextColor(50,50,50);doc.text(line.name,ml+6,y+2);
+    doc.setTextColor(30,30,30);doc.text(fmt(line.amount),W-mr-6,y+2,{align:'right'});
+    y+=10;
+  });
+
+  // Separator + Total
+  y+=2;doc.setDrawColor(200,168,78);doc.setLineWidth(0.8);doc.line(ml,y,W-mr,y);y+=8;
+  doc.setFillColor(30,30,30);doc.roundedRect(W-mr-70,y-4,70,14,3,3,'F');
+  doc.setFontSize(9);doc.setTextColor(200,168,78);doc.text('TOTAL',W-mr-64,y+4);
+  doc.setFontSize(14);doc.setTextColor(255,255,255);doc.text(fmt(q.total),W-mr-6,y+5,{align:'right'});
+  y+=22;
+
+  // Notes
+  if(q.notes){doc.setFontSize(8);doc.setTextColor(120,120,120);doc.text('OBSERVACIONES',ml,y);y+=5;
+    doc.setFontSize(9);doc.setTextColor(80,80,80);const nl=doc.splitTextToSize(q.notes,cw);doc.text(nl,ml,y);y+=nl.length*5+8}
+
+  // Footer
+  const fy=H-18;doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);doc.line(ml,fy,W-mr,fy);
+  doc.setFontSize(7);doc.setTextColor(160,160,160);
+  doc.text('DELSO — Venta e Instalación de Ascensores',ml,fy+6);
+  doc.text('Cotización válida por 30 días',ml,fy+10);
+  doc.text('Página 1 de 1',W-mr,fy+6,{align:'right'});
+  return doc;
 }
 
-function toggleExtra(id) {
-  if (selectedExtras[id]) {
-    delete selectedExtras[id];
-  } else {
-    const a = config.articles.find(x => x.id === id);
-    if (a) selectedExtras[id] = { name: a.name, price: a.price };
-  }
-  update();
+function saveAndExportPDF(){
+  const q=buildQuoteData();quotes.unshift(q);localStorage.setItem('delso_quotes',JSON.stringify(quotes));
+  generatePDF(q).save(`Cotizacion_${q.client.replace(/\s+/g,'_')}_${q.date||'sin-fecha'}.pdf`);
+  toast('PDF exportado y guardado');
 }
 
-function addExtraToQuote() {
-  const name = document.getElementById('extra-name').value.trim();
-  const price = parseFloat(document.getElementById('extra-price').value);
-  if (!name || isNaN(price)) return;
-  const id = 'custom_' + Date.now();
-  selectedExtras[id] = { name, price };
-  document.getElementById('extra-name').value = '';
-  document.getElementById('extra-price').value = '';
-  closeModal('modal-add-extra');
-  update();
-}
-
-// ═══════════ QUOTE ACTIONS ═══════════
-function resetQuote() {
-  stops = 2;
-  selectedExtras = {};
-  document.getElementById('q-client').value = '';
-  document.getElementById('q-phone').value = '';
-  document.getElementById('q-notes').value = '';
-  document.getElementById('q-date').value = new Date().toISOString().slice(0,10);
-  update();
-}
-
-function buildQuoteData() {
-  const lines = [];
-  lines.push({ name: `Ascensor (${stops} paradas)`, amount: calcBase() });
-  lines.push({ name: 'Instalación', amount: calcInstall() });
-  for (const ex of Object.values(selectedExtras)) {
-    lines.push({ name: ex.name, amount: Number(ex.price) });
-  }
-  return {
-    id: 'q_' + Date.now(),
-    client: document.getElementById('q-client').value.trim() || 'Sin nombre',
-    phone: document.getElementById('q-phone').value.trim(),
-    date: document.getElementById('q-date').value,
-    notes: document.getElementById('q-notes').value.trim(),
-    stops,
-    lines,
-    total: calcTotal(),
-    createdAt: new Date().toISOString()
-  };
-}
-
-function saveAndPreview() {
-  const q = buildQuoteData();
-  quotes.unshift(q);
-  localStorage.setItem('delso_quotes', JSON.stringify(quotes));
-  showSharePreview(q);
-  openModal('modal-share');
-}
-
-function showSharePreview(q) {
-  const rows = q.lines.map(l => `<tr><td>${l.name}</td><td>${fmt(l.amount)}</td></tr>`).join('');
-  document.getElementById('share-preview-container').innerHTML = `
-    <div class="share-preview">
-      <h2>DELSO</h2>
-      <p class="sp-sub">Cotización — ${q.date || 'Sin fecha'}</p>
-      <p style="margin-bottom:12px"><strong>${q.client}</strong>${q.phone ? ' · ' + q.phone : ''}</p>
-      <table><thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="sp-total"><span>TOTAL</span><span>${fmt(q.total)}</span></div>
-      ${q.notes ? '<p style="margin-top:10px;color:#888;font-size:12px">Notas: ' + q.notes + '</p>' : ''}
-    </div>`;
-}
-
-function shareQuote() {
-  const q = quotes[0];
-  if (!q) return;
-  let text = `*DELSO — Cotización*\nCliente: ${q.client}\nFecha: ${q.date}\n\n`;
-  q.lines.forEach(l => { text += `▸ ${l.name}: ${fmt(l.amount)}\n`; });
-  text += `\n*TOTAL: ${fmt(q.total)}*`;
-  if (q.notes) text += `\n\nNotas: ${q.notes}`;
-
-  if (navigator.share) {
-    navigator.share({ title: 'Cotización Delso', text }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(text).then(() => alert('Cotización copiada al portapapeles'));
-  }
+function reExportPDF(){
+  const q=quotes.find(x=>x.id===viewingQuoteId);if(!q)return;
+  generatePDF(q).save(`Cotizacion_${q.client.replace(/\s+/g,'_')}_${q.date||'sin-fecha'}.pdf`);
+  toast('PDF exportado');
 }
 
 // ═══════════ HISTORY ═══════════
-function renderHistory() {
-  const list = document.getElementById('history-list');
-  if (!quotes.length) {
-    list.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6"/></svg>
-      <p>Aún no hay cotizaciones guardadas</p>
-    </div>`;
-    return;
-  }
-  list.innerHTML = quotes.map(q => `
-    <div class="quote-card" onclick="viewQuote('${q.id}')">
-      <div class="quote-card-top">
-        <span class="quote-card-client">${q.client}</span>
-        <span class="quote-card-total">${fmt(q.total)}</span>
-      </div>
-      <div class="quote-card-bottom">${q.date || 'Sin fecha'} · ${q.stops} paradas · ${q.lines.length} items</div>
-    </div>`).join('');
-}
+function renderHistory(){
+  const l=document.getElementById('history-list');
+  if(!quotes.length){l.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6"/></svg><p>Aún no hay cotizaciones</p></div>`;return}
+  l.innerHTML=quotes.map(q=>`<div class="quote-card" onclick="viewQuote('${q.id}')"><div class="quote-card-top"><span class="quote-card-client">${q.client}</span><span class="quote-card-total">${fmt(q.total)}</span></div><div class="quote-card-bottom">${q.date||'Sin fecha'} · ${q.stops} paradas · ${q.lines.length} items</div></div>`).join('')}
 
-function viewQuote(id) {
-  const q = quotes.find(x => x.id === id);
-  if (!q) return;
-  viewingQuoteId = id;
-  const rows = q.lines.map(l => `<tr><td>${l.name}</td><td>${fmt(l.amount)}</td></tr>`).join('');
-  document.getElementById('view-quote-container').innerHTML = `
-    <div class="share-preview">
-      <h2>DELSO</h2>
-      <p class="sp-sub">Cotización — ${q.date || 'Sin fecha'}</p>
-      <p style="margin-bottom:12px"><strong>${q.client}</strong>${q.phone ? ' · ' + q.phone : ''}</p>
-      <table><thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="sp-total"><span>TOTAL</span><span>${fmt(q.total)}</span></div>
-      ${q.notes ? '<p style="margin-top:10px;color:#888;font-size:12px">Notas: ' + q.notes + '</p>' : ''}
-    </div>`;
+function viewQuote(id){
+  const q=quotes.find(x=>x.id===id);if(!q)return;viewingQuoteId=id;
+  const rows=q.lines.map(l=>`<div class="line-item"><span class="line-item-name">${l.name}</span><span class="line-item-val">${fmt(l.amount)}</span></div>`).join('');
+  document.getElementById('view-quote-container').innerHTML=`<div class="card" style="margin:0"><div class="card-label" style="margin-bottom:8px">${q.client}${q.phone?' · '+q.phone:''}</div><div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">${q.date||'Sin fecha'} · ${q.stops} paradas</div>${rows}<div class="total-row"><span class="total-label">Total</span><span class="total-val">${fmt(q.total)}</span></div>${q.notes?'<p style="margin-top:10px;color:var(--text-dim);font-size:12px">Notas: '+q.notes+'</p>':''}</div>`;
   openModal('modal-view-quote');
 }
 
-function deleteQuote() {
-  if (!viewingQuoteId) return;
-  if (!confirm('¿Eliminar esta cotización?')) return;
-  quotes = quotes.filter(q => q.id !== viewingQuoteId);
-  localStorage.setItem('delso_quotes', JSON.stringify(quotes));
-  viewingQuoteId = null;
-  closeModal('modal-view-quote');
-  renderHistory();
-}
+function deleteQuote(){if(!viewingQuoteId||!confirm('¿Eliminar?'))return;quotes=quotes.filter(q=>q.id!==viewingQuoteId);localStorage.setItem('delso_quotes',JSON.stringify(quotes));viewingQuoteId=null;closeModal('modal-view-quote');renderHistory();toast('Eliminada')}
 
-// ═══════════ CONFIGURATION ═══════════
-function loadConfig() {
-  document.getElementById('cfg-base').value = config.basePrice;
-  document.getElementById('cfg-per-stop').value = config.perStop;
-  document.getElementById('cfg-inst-low').value = config.instLow;
-  document.getElementById('cfg-inst-mid').value = config.instMid;
-  document.getElementById('cfg-inst-high').value = config.instHigh;
-  renderConfigExtras();
-}
+// ═══════════ CONFIG ═══════════
+function loadConfig(){document.getElementById('cfg-base').value=config.basePrice;document.getElementById('cfg-per-stop').value=config.perStop;document.getElementById('cfg-inst-low').value=config.instLow;document.getElementById('cfg-inst-mid').value=config.instMid;document.getElementById('cfg-inst-high').value=config.instHigh;renderConfigExtras()}
 
-function renderConfigExtras() {
-  const list = document.getElementById('config-extras-list');
-  if (!config.articles.length) {
-    list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos configurados.</p>';
-    return;
-  }
-  list.innerHTML = config.articles.map(a => `
-    <div class="config-item">
-      <span class="config-item-label">${a.name}</span>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="number" inputmode="decimal" value="${a.price}" onchange="updateArticlePrice('${a.id}', this.value)" style="width:80px">
-        <button class="btn-icon btn-danger" onclick="removeArticle('${a.id}')" title="Eliminar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-    </div>`).join('');
-}
+function renderConfigExtras(){
+  const l=document.getElementById('config-extras-list');
+  if(!config.articles.length){l.innerHTML='<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos.</p>';return}
+  l.innerHTML=config.articles.map(a=>`<div class="config-item"><span class="config-item-label">${a.name}</span><div style="display:flex;align-items:center;gap:6px"><input type="number" inputmode="decimal" value="${a.price}" onchange="updateArticlePrice('${a.id}',this.value)" style="width:80px"><button class="btn-icon btn-danger" onclick="removeArticle('${a.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div></div>`).join('')}
 
-function updateArticlePrice(id, val) {
-  const a = config.articles.find(x => x.id === id);
-  if (a) a.price = parseFloat(val) || 0;
-}
+function updateArticlePrice(id,v){const a=config.articles.find(x=>x.id===id);if(a)a.price=parseFloat(v)||0}
+function removeArticle(id){config.articles=config.articles.filter(a=>a.id!==id);delete selectedExtras[id];renderConfigExtras()}
 
-function removeArticle(id) {
-  config.articles = config.articles.filter(a => a.id !== id);
-  delete selectedExtras[id];
-  renderConfigExtras();
-}
+function addNewArticle(){const n=document.getElementById('new-art-name').value.trim(),p=parseFloat(document.getElementById('new-art-price').value);if(!n||isNaN(p))return;config.articles.push({id:'a'+Date.now(),name:n,price:p});document.getElementById('new-art-name').value='';document.getElementById('new-art-price').value='';closeModal('modal-new-article');renderConfigExtras()}
 
-function addNewArticle() {
-  const name = document.getElementById('new-art-name').value.trim();
-  const price = parseFloat(document.getElementById('new-art-price').value);
-  if (!name || isNaN(price)) return;
-  config.articles.push({ id: 'a' + Date.now(), name, price });
-  document.getElementById('new-art-name').value = '';
-  document.getElementById('new-art-price').value = '';
-  closeModal('modal-new-article');
-  renderConfigExtras();
-}
+function saveConfig(){config.basePrice=parseFloat(document.getElementById('cfg-base').value)||15000;config.perStop=parseFloat(document.getElementById('cfg-per-stop').value)||600;config.instLow=parseFloat(document.getElementById('cfg-inst-low').value)||1000;config.instMid=parseFloat(document.getElementById('cfg-inst-mid').value)||800;config.instHigh=parseFloat(document.getElementById('cfg-inst-high').value)||500;localStorage.setItem('delso_config',JSON.stringify(config));update();toast('Configuración guardada')}
 
-function saveConfig() {
-  config.basePrice = parseFloat(document.getElementById('cfg-base').value) || 15000;
-  config.perStop = parseFloat(document.getElementById('cfg-per-stop').value) || 600;
-  config.instLow = parseFloat(document.getElementById('cfg-inst-low').value) || 1000;
-  config.instMid = parseFloat(document.getElementById('cfg-inst-mid').value) || 800;
-  config.instHigh = parseFloat(document.getElementById('cfg-inst-high').value) || 500;
-  localStorage.setItem('delso_config', JSON.stringify(config));
-  update();
-  // Visual feedback
-  const btn = event.target.closest('.btn');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> ¡Guardado!';
-  setTimeout(() => { btn.innerHTML = orig; }, 1500);
-}
-
-// ═══════════ INIT ═══════════
-document.getElementById('q-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('q-date').value=new Date().toISOString().slice(0,10);
 update();
 </script>
 </body>
