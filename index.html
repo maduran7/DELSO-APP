@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Delso">
+<title>Delso — Cotizador</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRGVsc28gQ290aXphZG9yIiwic2hvcnRfbmFtZSI6IkRlbHNvIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwYTBhMGEiLCJ0aGVtZV9jb2xvciI6IiMwYTBhMGEifQ==">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Playfair+Display:wght@600&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1c1c1c;
+    --surface3: #242424;
+    --border: #2a2a2a;
+    --border-light: #333;
+    --text: #f0ede6;
+    --text-dim: #8a8680;
+    --text-mid: #b0aba3;
+    --accent: #c8a84e;
+    --accent-dim: rgba(200,168,78,0.15);
+    --accent-glow: rgba(200,168,78,0.08);
+    --danger: #c75050;
+    --danger-dim: rgba(199,80,80,0.15);
+    --success: #4a9e6e;
+    --success-dim: rgba(74,158,110,0.15);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100dvh;
+    overflow-x:hidden;
+    font-size:15px;
+    line-height:1.5;
+  }
+
+  /* ── NAV ── */
+  .tab-bar {
+    position:fixed; bottom:0; left:0; right:0;
+    background:rgba(10,10,10,0.92);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    display:flex;
+    padding: 6px 12px calc(var(--safe-bottom) + 4px);
+    border-top:1px solid var(--border);
+    z-index:100;
+  }
+  .tab-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; color:var(--text-dim);
+    font:500 10px 'DM Sans',sans-serif;
+    padding:8px 4px 4px;
+    cursor:pointer; transition:color .2s;
+  }
+  .tab-btn.active { color:var(--accent); }
+  .tab-btn svg { width:22px; height:22px; }
+
+  /* ── PAGES ── */
+  .page { display:none; padding: calc(var(--safe-top) + 16px) 16px calc(80px + var(--safe-bottom)) 16px; }
+  .page.active { display:block; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+  .page-title {
+    font-family:'Playfair Display',serif;
+    font-size:28px; font-weight:600;
+    margin-bottom:4px;
+    background:linear-gradient(135deg,var(--text),var(--accent));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .page-subtitle { color:var(--text-dim); font-size:13px; margin-bottom:20px; }
+
+  /* ── CARDS ── */
+  .card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:12px;
+  }
+  .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .card-label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-dim); font-weight:500; }
+
+  /* ── FORMS ── */
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-weight:500; letter-spacing:.5px; text-transform:uppercase; }
+  .field input, .field select, .field textarea {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px 14px;
+    color:var(--text); font:400 15px 'DM Sans',sans-serif;
+    outline:none; transition:border-color .2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--accent); }
+  .field select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8680'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 20px; border-radius:var(--radius-sm);
+    font:500 14px 'DM Sans',sans-serif;
+    border:none; cursor:pointer; transition:all .2s;
+    width:100%;
+  }
+  .btn-primary { background:var(--accent); color:#0a0a0a; }
+  .btn-primary:active { transform:scale(.97); filter:brightness(1.1); }
+  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:active { background:var(--surface3); }
+  .btn-danger { background:var(--danger-dim); color:var(--danger); }
+  .btn-sm { padding:8px 14px; font-size:13px; width:auto; }
+  .btn-icon { width:36px; height:36px; padding:0; border-radius:50%; flex-shrink:0; }
+
+  /* ── STEPPER ── */
+  .stepper { display:flex; align-items:center; gap:0; }
+  .stepper button {
+    width:40px; height:40px; border:1px solid var(--border);
+    background:var(--surface2); color:var(--text); font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background .15s;
+  }
+  .stepper button:first-child { border-radius:var(--radius-sm) 0 0 var(--radius-sm); }
+  .stepper button:last-child { border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+  .stepper button:active { background:var(--surface3); }
+  .stepper .stepper-val {
+    width:56px; height:40px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+    background:var(--surface); display:flex; align-items:center; justify-content:center;
+    font:500 16px 'DM Sans',sans-serif; color:var(--text);
+  }
+
+  /* ── LINE ITEMS ── */
+  .line-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .line-item:last-child { border-bottom:none; }
+  .line-item-name { font-size:14px; color:var(--text-mid); flex:1; }
+  .line-item-val { font-size:14px; font-weight:500; color:var(--text); min-width:80px; text-align:right; }
+
+  .total-row {
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:14px 0 4px; margin-top:4px;
+    border-top:2px solid var(--accent);
+  }
+  .total-label { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); font-weight:500; }
+  .total-val { font-family:'Playfair Display',serif; font-size:26px; color:var(--accent); }
+
+  /* ── EXTRAS LIST ── */
+  .extra-toggle {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 0; border-bottom:1px solid var(--border);
+    cursor:pointer;
+  }
+  .extra-toggle:last-child { border-bottom:none; }
+  .extra-check {
+    width:22px; height:22px; border-radius:6px; border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:all .2s;
+  }
+  .extra-check.checked { background:var(--accent); border-color:var(--accent); }
+  .extra-check svg { opacity:0; transition:opacity .2s; }
+  .extra-check.checked svg { opacity:1; }
+  .extra-info { flex:1; }
+  .extra-name { font-size:14px; color:var(--text); }
+  .extra-price { font-size:12px; color:var(--text-dim); }
+
+  /* ── QUOTE HISTORY ── */
+  .quote-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition:border-color .2s;
+  }
+  .quote-card:active { border-color:var(--accent); }
+  .quote-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .quote-card-client { font-weight:500; font-size:15px; }
+  .quote-card-total { font-weight:700; color:var(--accent); font-size:15px; }
+  .quote-card-bottom { font-size:12px; color:var(--text-dim); }
+
+  .empty-state { text-align:center; padding:40px 20px; }
+  .empty-state svg { width:48px; height:48px; color:var(--text-dim); margin-bottom:12px; opacity:.4; }
+  .empty-state p { color:var(--text-dim); font-size:14px; }
+
+  /* ── CONFIG ITEM ── */
+  .config-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .config-item:last-child { border-bottom:none; }
+  .config-item-label { font-size:14px; color:var(--text-mid); flex:1; padding-right:12px; }
+  .config-item input {
+    width:100px; text-align:right;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:8px 10px;
+    color:var(--text); font:500 14px 'DM Sans',sans-serif;
+    outline:none;
+  }
+  .config-item input:focus { border-color:var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.7);
+    z-index:200; display:none; align-items:flex-end; justify-content:center;
+    animation: fadeIn .2s;
+  }
+  .modal-overlay.active { display:flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal {
+    background:var(--surface);
+    border-radius:20px 20px 0 0;
+    padding:24px 20px calc(var(--safe-bottom) + 20px);
+    width:100%; max-width:500px;
+    max-height:85dvh; overflow-y:auto;
+    animation: slideUp .3s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:none} }
+  .modal-handle { width:36px; height:4px; background:var(--border-light); border-radius:2px; margin:0 auto 16px; }
+  .modal-title { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:16px; }
+
+  /* ── SHARE PREVIEW ── */
+  .share-preview {
+    background:#fff; color:#111; border-radius:var(--radius);
+    padding:24px; margin-bottom:16px; font-size:13px; line-height:1.7;
+  }
+  .share-preview h2 { font-family:'Playfair Display',serif; font-size:18px; margin-bottom:4px; color:#111; }
+  .share-preview .sp-sub { color:#666; font-size:11px; margin-bottom:14px; }
+  .share-preview table { width:100%; border-collapse:collapse; margin-bottom:12px; }
+  .share-preview th { text-align:left; font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.5px; padding:6px 0; border-bottom:2px solid #eee; }
+  .share-preview td { padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:13px; }
+  .share-preview td:last-child { text-align:right; font-weight:500; }
+  .share-preview .sp-total { display:flex; justify-content:space-between; font-size:16px; font-weight:700; padding-top:8px; border-top:2px solid #c8a84e; }
+
+  /* ── BADGE ── */
+  .badge { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:500; }
+  .badge-gold { background:var(--accent-dim); color:var(--accent); }
+
+  /* ── ANIMATIONS ── */
+  .stagger > * { opacity:0; animation: fadeUp .4s ease forwards; }
+  .stagger > *:nth-child(1){animation-delay:.05s}
+  .stagger > *:nth-child(2){animation-delay:.1s}
+  .stagger > *:nth-child(3){animation-delay:.12s}
+  .stagger > *:nth-child(4){animation-delay:.16s}
+  .stagger > *:nth-child(5){animation-delay:.2s}
+  .stagger > *:nth-child(6){animation-delay:.24s}
+  .stagger > *:nth-child(7){animation-delay:.28s}
+  .stagger > *:nth-child(8){animation-delay:.32s}
+
+  .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width:0; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PAGE: COTIZAR ═══════════ -->
+<div id="page-quote" class="page active">
+  <div class="stagger">
+    <h1 class="page-title">Nueva Cotización</h1>
+    <p class="page-subtitle">Configura el ascensor y genera la propuesta</p>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Datos del Cliente</span>
+      </div>
+      <div class="field">
+        <label>Nombre / Empresa</label>
+        <input id="q-client" type="text" placeholder="Ej: Edificio Los Robles">
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Teléfono</label>
+          <input id="q-phone" type="tel" placeholder="Opcional">
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input id="q-date" type="date">
+        </div>
+      </div>
+      <div class="field">
+        <label>Notas</label>
+        <textarea id="q-notes" rows="2" placeholder="Observaciones..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Ascensor</span>
+        <span class="badge badge-gold" id="badge-paradas">2 paradas</span>
+      </div>
+      <div class="field">
+        <label>Número de Paradas</label>
+        <div class="stepper">
+          <button onclick="changeStops(-1)">−</button>
+          <div class="stepper-val" id="stop-count">2</div>
+          <button onclick="changeStops(1)">+</button>
+        </div>
+      </div>
+      <div class="line-item">
+        <span class="line-item-name">Ascensor base</span>
+        <span class="line-item-val" id="li-base">$15,000</span>
+      </div>
+      <div class="line-item">
+        <span class="line-item-name">Paradas adicionales</span>
+        <span class="line-item-val" id="li-extra-stops">$0</span>
+      </div>
+      <div class="line-item">
+        <span class="line-item-name">Instalación</span>
+        <span class="line-item-val" id="li-install">$2,000</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Artículos Adicionales</span>
+        <button class="btn btn-secondary btn-sm" onclick="openModal('modal-add-extra')" style="width:auto">+ Agregar</button>
+      </div>
+      <div id="extras-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-label">Resumen</span></div>
+      <div id="summary-lines"></div>
+      <div class="total-row">
+        <span class="total-label">Total</span>
+        <span class="total-val" id="grand-total">$17,000</span>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:4px">
+      <button class="btn btn-secondary" onclick="resetQuote()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 3v9h9"/></svg>
+        Limpiar
+      </button>
+      <button class="btn btn-primary" onclick="saveAndPreview()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+        Cotizar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PAGE: HISTORIAL ═══════════ -->
+<div id="page-history" class="page">
+  <h1 class="page-title">Historial</h1>
+  <p class="page-subtitle">Cotizaciones guardadas</p>
+  <div id="history-list"></div>
+</div>
+
+<!-- ═══════════ PAGE: CONFIGURACIÓN ═══════════ -->
+<div id="page-config" class="page">
+  <div class="stagger">
+    <h1 class="page-title">Configuración</h1>
+    <p class="page-subtitle">Modifica precios base y artículos</p>
+
+    <div class="card">
+      <div class="card-header"><span class="card-label">Precios del Ascensor</span></div>
+      <div class="config-item">
+        <span class="config-item-label">Precio base (2 paradas)</span>
+        <input id="cfg-base" type="number" inputmode="decimal">
+      </div>
+      <div class="config-item">
+        <span class="config-item-label">Precio por parada adicional</span>
+        <input id="cfg-per-stop" type="number" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-label">Instalación por Parada</span></div>
+      <div class="config-item">
+        <span class="config-item-label">Hasta 4 paradas</span>
+        <input id="cfg-inst-low" type="number" inputmode="decimal">
+      </div>
+      <div class="config-item">
+        <span class="config-item-label">5 paradas</span>
+        <input id="cfg-inst-mid" type="number" inputmode="decimal">
+      </div>
+      <div class="config-item">
+        <span class="config-item-label">6+ paradas</span>
+        <input id="cfg-inst-high" type="number" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-label">Artículos Adicionales</span>
+        <button class="btn btn-secondary btn-sm" onclick="openModal('modal-new-article')" style="width:auto">+ Nuevo</button>
+      </div>
+      <div id="config-extras-list"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+      Guardar Configuración
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ TAB BAR ═══════════ -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchPage('quote')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>
+    Cotizar
+  </button>
+  <button class="tab-btn" onclick="switchPage('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Historial
+  </button>
+  <button class="tab-btn" onclick="switchPage('config')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Config
+  </button>
+</nav>
+
+<!-- ═══════════ MODAL: Add Extra to Quote ═══════════ -->
+<div class="modal-overlay" id="modal-add-extra">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar Artículo</div>
+    <div class="field">
+      <label>Nombre</label>
+      <input id="extra-name" type="text" placeholder="Ej: Cabina moderna">
+    </div>
+    <div class="field">
+      <label>Precio ($)</label>
+      <input id="extra-price" type="number" inputmode="decimal" placeholder="700">
+    </div>
+    <div class="row-2">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-extra')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addExtraToQuote()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: New Article for Config ═══════════ -->
+<div class="modal-overlay" id="modal-new-article">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo Artículo</div>
+    <div class="field">
+      <label>Nombre del artículo</label>
+      <input id="new-art-name" type="text" placeholder="Ej: Puerta automática">
+    </div>
+    <div class="field">
+      <label>Precio ($)</label>
+      <input id="new-art-price" type="number" inputmode="decimal" placeholder="500">
+    </div>
+    <div class="row-2">
+      <button class="btn btn-secondary" onclick="closeModal('modal-new-article')">Cancelar</button>
+      <button class="btn btn-primary" onclick="addNewArticle()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: Share/Preview ═══════════ -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cotización Generada</div>
+    <div id="share-preview-container"></div>
+    <div class="row-2">
+      <button class="btn btn-secondary" onclick="closeModal('modal-share')">Cerrar</button>
+      <button class="btn btn-primary" onclick="shareQuote()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+        Compartir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: View Saved Quote ═══════════ -->
+<div class="modal-overlay" id="modal-view-quote">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Detalle</div>
+    <div id="view-quote-container"></div>
+    <div class="row-2" style="margin-top:12px">
+      <button class="btn btn-danger btn-sm" id="btn-delete-quote" onclick="deleteQuote()">Eliminar</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-view-quote')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════ STATE ═══════════
+const DEFAULT_CONFIG = {
+  basePrice: 15000,
+  perStop: 600,
+  instLow: 1000,   // <=4 paradas
+  instMid: 800,    // 5 paradas
+  instHigh: 500,   // 6+ paradas
+  articles: [
+    { id: 'a1', name: 'Cabina moderna', price: 700 },
+    { id: 'a2', name: 'Puerta automática', price: 1200 },
+    { id: 'a3', name: 'Espejo panorámico', price: 350 },
+    { id: 'a4', name: 'Iluminación LED', price: 250 },
+    { id: 'a5', name: 'Piso de acero inoxidable', price: 400 },
+    { id: 'a6', name: 'Sistema de emergencia', price: 800 },
+  ]
+};
+
+let config = JSON.parse(localStorage.getItem('delso_config')) || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let quotes = JSON.parse(localStorage.getItem('delso_quotes')) || [];
+let stops = 2;
+let selectedExtras = {}; // { id: { name, price } }
+let viewingQuoteId = null;
+
+// ═══════════ NAVIGATION ═══════════
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.tab-btn')[['quote','history','config'].indexOf(page)].classList.add('active');
+  if (page === 'history') renderHistory();
+  if (page === 'config') loadConfig();
+}
+
+// ═══════════ MODAL ═══════════
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+// ═══════════ FORMAT ═══════════
+const fmt = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+// ═══════════ CALCULATIONS ═══════════
+function calcBase() {
+  const extra = Math.max(0, stops - 2) * config.perStop;
+  return config.basePrice + extra;
+}
+
+function calcInstall() {
+  let rate;
+  if (stops <= 4) rate = config.instLow;
+  else if (stops === 5) rate = config.instMid;
+  else rate = config.instHigh;
+  return stops * rate;
+}
+
+function calcExtrasTotal() {
+  return Object.values(selectedExtras).reduce((s, e) => s + Number(e.price), 0);
+}
+
+function calcTotal() {
+  return calcBase() + calcInstall() + calcExtrasTotal();
+}
+
+// ═══════════ UPDATE UI ═══════════
+function update() {
+  document.getElementById('stop-count').textContent = stops;
+  document.getElementById('badge-paradas').textContent = stops + ' parada' + (stops !== 1 ? 's' : '');
+
+  const base = config.basePrice;
+  const extraStops = Math.max(0, stops - 2) * config.perStop;
+  const install = calcInstall();
+
+  document.getElementById('li-base').textContent = fmt(base);
+  document.getElementById('li-extra-stops').textContent = fmt(extraStops);
+  document.getElementById('li-install').textContent = fmt(install);
+
+  // Summary
+  let html = '';
+  html += `<div class="line-item"><span class="line-item-name">Ascensor (${stops} paradas)</span><span class="line-item-val">${fmt(calcBase())}</span></div>`;
+  html += `<div class="line-item"><span class="line-item-name">Instalación</span><span class="line-item-val">${fmt(install)}</span></div>`;
+  for (const [id, ex] of Object.entries(selectedExtras)) {
+    html += `<div class="line-item"><span class="line-item-name">${ex.name}</span><span class="line-item-val">${fmt(ex.price)}</span></div>`;
+  }
+  document.getElementById('summary-lines').innerHTML = html;
+  document.getElementById('grand-total').textContent = fmt(calcTotal());
+
+  renderExtrasSelector();
+}
+
+function changeStops(d) {
+  stops = Math.max(2, stops + d);
+  update();
+}
+
+// ═══════════ EXTRAS SELECTOR ═══════════
+function renderExtrasSelector() {
+  const list = document.getElementById('extras-list');
+  if (!config.articles.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos. Agrega desde Configuración.</p>';
+    return;
+  }
+  list.innerHTML = config.articles.map(a => {
+    const checked = selectedExtras[a.id] ? 'checked' : '';
+    return `
+      <div class="extra-toggle" onclick="toggleExtra('${a.id}')">
+        <div class="extra-check ${checked}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div class="extra-info">
+          <div class="extra-name">${a.name}</div>
+          <div class="extra-price">${fmt(a.price)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleExtra(id) {
+  if (selectedExtras[id]) {
+    delete selectedExtras[id];
+  } else {
+    const a = config.articles.find(x => x.id === id);
+    if (a) selectedExtras[id] = { name: a.name, price: a.price };
+  }
+  update();
+}
+
+function addExtraToQuote() {
+  const name = document.getElementById('extra-name').value.trim();
+  const price = parseFloat(document.getElementById('extra-price').value);
+  if (!name || isNaN(price)) return;
+  const id = 'custom_' + Date.now();
+  selectedExtras[id] = { name, price };
+  document.getElementById('extra-name').value = '';
+  document.getElementById('extra-price').value = '';
+  closeModal('modal-add-extra');
+  update();
+}
+
+// ═══════════ QUOTE ACTIONS ═══════════
+function resetQuote() {
+  stops = 2;
+  selectedExtras = {};
+  document.getElementById('q-client').value = '';
+  document.getElementById('q-phone').value = '';
+  document.getElementById('q-notes').value = '';
+  document.getElementById('q-date').value = new Date().toISOString().slice(0,10);
+  update();
+}
+
+function buildQuoteData() {
+  const lines = [];
+  lines.push({ name: `Ascensor (${stops} paradas)`, amount: calcBase() });
+  lines.push({ name: 'Instalación', amount: calcInstall() });
+  for (const ex of Object.values(selectedExtras)) {
+    lines.push({ name: ex.name, amount: Number(ex.price) });
+  }
+  return {
+    id: 'q_' + Date.now(),
+    client: document.getElementById('q-client').value.trim() || 'Sin nombre',
+    phone: document.getElementById('q-phone').value.trim(),
+    date: document.getElementById('q-date').value,
+    notes: document.getElementById('q-notes').value.trim(),
+    stops,
+    lines,
+    total: calcTotal(),
+    createdAt: new Date().toISOString()
+  };
+}
+
+function saveAndPreview() {
+  const q = buildQuoteData();
+  quotes.unshift(q);
+  localStorage.setItem('delso_quotes', JSON.stringify(quotes));
+  showSharePreview(q);
+  openModal('modal-share');
+}
+
+function showSharePreview(q) {
+  const rows = q.lines.map(l => `<tr><td>${l.name}</td><td>${fmt(l.amount)}</td></tr>`).join('');
+  document.getElementById('share-preview-container').innerHTML = `
+    <div class="share-preview">
+      <h2>DELSO</h2>
+      <p class="sp-sub">Cotización — ${q.date || 'Sin fecha'}</p>
+      <p style="margin-bottom:12px"><strong>${q.client}</strong>${q.phone ? ' · ' + q.phone : ''}</p>
+      <table><thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="sp-total"><span>TOTAL</span><span>${fmt(q.total)}</span></div>
+      ${q.notes ? '<p style="margin-top:10px;color:#888;font-size:12px">Notas: ' + q.notes + '</p>' : ''}
+    </div>`;
+}
+
+function shareQuote() {
+  const q = quotes[0];
+  if (!q) return;
+  let text = `*DELSO — Cotización*\nCliente: ${q.client}\nFecha: ${q.date}\n\n`;
+  q.lines.forEach(l => { text += `▸ ${l.name}: ${fmt(l.amount)}\n`; });
+  text += `\n*TOTAL: ${fmt(q.total)}*`;
+  if (q.notes) text += `\n\nNotas: ${q.notes}`;
+
+  if (navigator.share) {
+    navigator.share({ title: 'Cotización Delso', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('Cotización copiada al portapapeles'));
+  }
+}
+
+// ═══════════ HISTORY ═══════════
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!quotes.length) {
+    list.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6"/></svg>
+      <p>Aún no hay cotizaciones guardadas</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = quotes.map(q => `
+    <div class="quote-card" onclick="viewQuote('${q.id}')">
+      <div class="quote-card-top">
+        <span class="quote-card-client">${q.client}</span>
+        <span class="quote-card-total">${fmt(q.total)}</span>
+      </div>
+      <div class="quote-card-bottom">${q.date || 'Sin fecha'} · ${q.stops} paradas · ${q.lines.length} items</div>
+    </div>`).join('');
+}
+
+function viewQuote(id) {
+  const q = quotes.find(x => x.id === id);
+  if (!q) return;
+  viewingQuoteId = id;
+  const rows = q.lines.map(l => `<tr><td>${l.name}</td><td>${fmt(l.amount)}</td></tr>`).join('');
+  document.getElementById('view-quote-container').innerHTML = `
+    <div class="share-preview">
+      <h2>DELSO</h2>
+      <p class="sp-sub">Cotización — ${q.date || 'Sin fecha'}</p>
+      <p style="margin-bottom:12px"><strong>${q.client}</strong>${q.phone ? ' · ' + q.phone : ''}</p>
+      <table><thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="sp-total"><span>TOTAL</span><span>${fmt(q.total)}</span></div>
+      ${q.notes ? '<p style="margin-top:10px;color:#888;font-size:12px">Notas: ' + q.notes + '</p>' : ''}
+    </div>`;
+  openModal('modal-view-quote');
+}
+
+function deleteQuote() {
+  if (!viewingQuoteId) return;
+  if (!confirm('¿Eliminar esta cotización?')) return;
+  quotes = quotes.filter(q => q.id !== viewingQuoteId);
+  localStorage.setItem('delso_quotes', JSON.stringify(quotes));
+  viewingQuoteId = null;
+  closeModal('modal-view-quote');
+  renderHistory();
+}
+
+// ═══════════ CONFIGURATION ═══════════
+function loadConfig() {
+  document.getElementById('cfg-base').value = config.basePrice;
+  document.getElementById('cfg-per-stop').value = config.perStop;
+  document.getElementById('cfg-inst-low').value = config.instLow;
+  document.getElementById('cfg-inst-mid').value = config.instMid;
+  document.getElementById('cfg-inst-high').value = config.instHigh;
+  renderConfigExtras();
+}
+
+function renderConfigExtras() {
+  const list = document.getElementById('config-extras-list');
+  if (!config.articles.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos configurados.</p>';
+    return;
+  }
+  list.innerHTML = config.articles.map(a => `
+    <div class="config-item">
+      <span class="config-item-label">${a.name}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" inputmode="decimal" value="${a.price}" onchange="updateArticlePrice('${a.id}', this.value)" style="width:80px">
+        <button class="btn-icon btn-danger" onclick="removeArticle('${a.id}')" title="Eliminar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function updateArticlePrice(id, val) {
+  const a = config.articles.find(x => x.id === id);
+  if (a) a.price = parseFloat(val) || 0;
+}
+
+function removeArticle(id) {
+  config.articles = config.articles.filter(a => a.id !== id);
+  delete selectedExtras[id];
+  renderConfigExtras();
+}
+
+function addNewArticle() {
+  const name = document.getElementById('new-art-name').value.trim();
+  const price = parseFloat(document.getElementById('new-art-price').value);
+  if (!name || isNaN(price)) return;
+  config.articles.push({ id: 'a' + Date.now(), name, price });
+  document.getElementById('new-art-name').value = '';
+  document.getElementById('new-art-price').value = '';
+  closeModal('modal-new-article');
+  renderConfigExtras();
+}
+
+function saveConfig() {
+  config.basePrice = parseFloat(document.getElementById('cfg-base').value) || 15000;
+  config.perStop = parseFloat(document.getElementById('cfg-per-stop').value) || 600;
+  config.instLow = parseFloat(document.getElementById('cfg-inst-low').value) || 1000;
+  config.instMid = parseFloat(document.getElementById('cfg-inst-mid').value) || 800;
+  config.instHigh = parseFloat(document.getElementById('cfg-inst-high').value) || 500;
+  localStorage.setItem('delso_config', JSON.stringify(config));
+  update();
+  // Visual feedback
+  const btn = event.target.closest('.btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> ¡Guardado!';
+  setTimeout(() => { btn.innerHTML = orig; }, 1500);
+}
+
+// ═══════════ INIT ═══════════
+document.getElementById('q-date').value = new Date().toISOString().slice(0,10);
+update();
+</script>
+</body>
+</html>
