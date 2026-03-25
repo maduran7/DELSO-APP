@@ -185,32 +185,286 @@
 </div></div>
 
 <script>
-// ═══ DYNAMIC jsPDF LOADER ═══
-let jsPDFReady = false;
-function loadJsPDF() {
-  return new Promise((resolve, reject) => {
-    if (window.jspdf) { jsPDFReady = true; resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js';
-    s.onload = () => { jsPDFReady = true; resolve(); };
-    s.onerror = () => reject(new Error('No se pudo cargar jsPDF'));
-    document.head.appendChild(s);
-  });
-}
-// Try loading immediately
-loadJsPDF().catch(() => {});
+// ════════════════════════════════════════════
+// MINI PDF BUILDER — ZERO DEPENDENCIES
+// Builds a valid PDF file from scratch, no CDN
+// ════════════════════════════════════════════
+class MiniPDF {
+  constructor() {
+    this.objects = [];
+    this.pages = [];
+    this.currentPage = null;
+    this.fonts = {};
+    this._addFont('Helvetica', 'F1');
+    this._addFont('Helvetica-Bold', 'F2');
+  }
+  _addFont(name, alias) {
+    const id = this._addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /${name} /Encoding /WinAnsiEncoding >>`);
+    this.fonts[alias] = id;
+  }
+  _addObj(content) {
+    this.objects.push(content);
+    return this.objects.length; // 1-based
+  }
+  addPage() {
+    this.currentPage = { stream: '', width: 595.28, height: 841.89 }; // A4
+    this.pages.push(this.currentPage);
+  }
+  // Colors
+  setFillColor(r,g,b) { this.currentPage.stream += `${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} rg\n`; }
+  setStrokeColor(r,g,b) { this.currentPage.stream += `${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} RG\n`; }
+  setLineWidth(w) { this.currentPage.stream += `${w} w\n`; }
+  // Shapes
+  rect(x,y,w,h,fill=true) {
+    const py = this.currentPage.height - y - h;
+    this.currentPage.stream += `${x.toFixed(2)} ${py.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re ${fill?'f':'S'}\n`;
+  }
+  line(x1,y1,x2,y2) {
+    const py1 = this.currentPage.height - y1, py2 = this.currentPage.height - y2;
+    this.currentPage.stream += `${x1.toFixed(2)} ${py1.toFixed(2)} m ${x2.toFixed(2)} ${py2.toFixed(2)} l S\n`;
+  }
+  // Text
+  setFont(bold, size) {
+    const f = bold ? 'F2' : 'F1';
+    this.currentPage.stream += `BT /${f} ${size} Tf ET\n`;
+    this._lastFont = f;
+    this._lastSize = size;
+  }
+  setTextColor(r,g,b) { this.currentPage.stream += `${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} rg\n`; }
+  // Escape special PDF chars
+  _escPdf(str) { return str.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+  text(str, x, y, align='left') {
+    const py = this.currentPage.height - y;
+    const f = this._lastFont || 'F1';
+    const s = this._lastSize || 10;
+    let tx = x;
+    if (align === 'right') {
+      const w = this._textWidth(str, s, f);
+      tx = x - w;
+    }
+    this.currentPage.stream += `BT /${f} ${s} Tf ${tx.toFixed(2)} ${py.toFixed(2)} Td (${this._escPdf(str)}) Tj ET\n`;
+  }
+  _textWidth(str, size, font) {
+    // Approximate: Helvetica avg char width ~0.52 of font size
+    const factor = (font === 'F2') ? 0.58 : 0.52;
+    return str.length * size * factor;
+  }
+  // Build PDF binary
+  build() {
+    const objects = [];
+    let objCount = 0;
 
-// ═══ STATE ═══
+    function addObj(content) { objCount++; objects.push({ id: objCount, content }); return objCount; }
+
+    // Catalog, Pages placeholder
+    const catalogId = addObj(null);
+    const pagesId = addObj(null);
+
+    // Fonts
+    const fontIds = {};
+    for (const [alias, _] of Object.entries(this.fonts)) {
+      fontIds[alias] = addObj(`<< /Type /Font /Subtype /Type1 /BaseFont /${alias === 'F1' ? 'Helvetica' : 'Helvetica-Bold'} /Encoding /WinAnsiEncoding >>`);
+    }
+
+    // Font dict
+    let fontDict = '<< ';
+    for (const [alias, id] of Object.entries(fontIds)) fontDict += `/${alias} ${id} 0 R `;
+    fontDict += '>>';
+
+    // Pages
+    const pageIds = [];
+    for (const page of this.pages) {
+      const streamBytes = new TextEncoder().encode(page.stream);
+      const streamId = addObj(`<< /Length ${streamBytes.length} >>\nstream\n${page.stream}endstream`);
+      const resourceDict = `<< /Font ${fontDict} >>`;
+      const pageId = addObj(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${page.width.toFixed(2)} ${page.height.toFixed(2)}] /Contents ${streamId} 0 R /Resources ${resourceDict} >>`);
+      pageIds.push(pageId);
+    }
+
+    // Fill catalog and pages
+    objects[catalogId-1].content = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+    const kids = pageIds.map(id => `${id} 0 R`).join(' ');
+    objects[pagesId-1].content = `<< /Type /Pages /Kids [${kids}] /Count ${pageIds.length} >>`;
+
+    // Serialize
+    let pdf = '%PDF-1.4\n';
+    const offsets = [];
+    for (const obj of objects) {
+      offsets.push(pdf.length);
+      pdf += `${obj.id} 0 obj\n${obj.content}\nendobj\n`;
+    }
+
+    // XRef
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += '0000000000 65535 f \n';
+    for (const off of offsets) {
+      pdf += String(off).padStart(10, '0') + ' 00000 n \n';
+    }
+
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\n`;
+    pdf += `startxref\n${xrefOffset}\n%%EOF`;
+
+    return new Blob([pdf], { type: 'application/pdf' });
+  }
+}
+
+// ════════════════════════════════════════════
+// GENERATE THE QUOTE PDF
+// ════════════════════════════════════════════
+function generatePDF(q) {
+  const pdf = new MiniPDF();
+  pdf.addPage();
+  const W = 595.28, ml = 56, mr = 56, cw = W - ml - mr;
+  const pt = 2.835; // mm to pt
+
+  // Header bar
+  pdf.setFillColor(22,22,22);
+  pdf.rect(0, 0, W, 119);
+
+  // Logo text
+  pdf.setFont(true, 24);
+  pdf.setTextColor(158,158,158);
+  pdf.text('DEL', ml, 52);
+  pdf.setTextColor(244,121,32);
+  pdf.text('SO', ml + 52, 52);
+
+  // Tagline
+  pdf.setFont(false, 7);
+  pdf.setTextColor(140,140,140);
+  pdf.text('Venta e Instalacion de Ascensores', ml, 68);
+
+  // Quote info
+  pdf.setFont(true, 9);
+  pdf.setTextColor(244,121,32);
+  pdf.text('COTIZACION', W - mr, 40, 'right');
+  pdf.setFont(false, 8);
+  pdf.setTextColor(200,200,200);
+  pdf.text('#' + q.id.replace('q_','').slice(-6).toUpperCase(), W - mr, 54, 'right');
+  pdf.text(q.date || 'Sin fecha', W - mr, 67, 'right');
+
+  let y = 140;
+
+  // Client box
+  pdf.setFillColor(245,243,238);
+  pdf.rect(ml, y, cw, 65);
+  pdf.setFont(true, 8);
+  pdf.setTextColor(140,140,140);
+  pdf.text('CLIENTE', ml + 16, y + 20);
+  pdf.setFont(true, 13);
+  pdf.setTextColor(30,30,30);
+  pdf.text(q.client, ml + 16, y + 38);
+  if (q.phone) { pdf.setFont(false, 9); pdf.setTextColor(100,100,100); pdf.text('Tel: ' + q.phone, ml + 16, y + 52); }
+  y += 80;
+
+  // Table header
+  pdf.setFillColor(244,121,32);
+  pdf.rect(ml, y, cw, 28);
+  pdf.setFont(true, 9);
+  pdf.setTextColor(255,255,255);
+  pdf.text('DESCRIPCION', ml + 16, y + 18);
+  pdf.text('MONTO', W - mr - 16, y + 18, 'right');
+  y += 38;
+
+  // Table rows
+  q.lines.forEach((line, i) => {
+    if (i % 2 === 0) { pdf.setFillColor(250,249,246); pdf.rect(ml, y, cw, 28); }
+    pdf.setFont(false, 10);
+    pdf.setTextColor(60,60,60);
+    pdf.text(line.name, ml + 16, y + 18);
+    pdf.setFont(true, 10);
+    pdf.setTextColor(30,30,30);
+    pdf.text(fmt(line.amount), W - mr - 16, y + 18, 'right');
+    y += 28;
+  });
+
+  // Separator
+  y += 8;
+  pdf.setStrokeColor(244,121,32);
+  pdf.setLineWidth(2);
+  pdf.line(ml, y, W - mr, y);
+  y += 20;
+
+  // Total box
+  pdf.setFillColor(22,22,22);
+  pdf.rect(W - mr - 200, y, 200, 42);
+  pdf.setFont(true, 9);
+  pdf.setTextColor(244,121,32);
+  pdf.text('TOTAL', W - mr - 180, y + 26);
+  pdf.setFont(true, 18);
+  pdf.setTextColor(255,255,255);
+  pdf.text(fmt(q.total), W - mr - 16, y + 27, 'right');
+  y += 56;
+
+  // Notes
+  if (q.notes) {
+    pdf.setFont(true, 8);
+    pdf.setTextColor(140,140,140);
+    pdf.text('OBSERVACIONES', ml, y);
+    y += 16;
+    pdf.setFont(false, 9);
+    pdf.setTextColor(80,80,80);
+    // Simple word wrap
+    const words = q.notes.split(' ');
+    let line = '';
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (test.length > 80) { pdf.text(line, ml, y); y += 14; line = word; }
+      else line = test;
+    }
+    if (line) { pdf.text(line, ml, y); y += 14; }
+  }
+
+  // Footer
+  const fy = 841.89 - 45;
+  pdf.setStrokeColor(220,220,220);
+  pdf.setLineWidth(0.5);
+  pdf.line(ml, fy, W - mr, fy);
+  pdf.setFont(false, 7);
+  pdf.setTextColor(160,160,160);
+  pdf.text('DELSO  —  Venta e Instalacion de Ascensores', ml, fy + 14);
+  pdf.text('Cotizacion valida por 30 dias', ml, fy + 26);
+  pdf.text('Pagina 1 de 1', W - mr, fy + 14, 'right');
+
+  return pdf.build();
+}
+
+async function sharePDF(q) {
+  const blob = generatePDF(q);
+  const filename = `Cotizacion_DELSO_${q.client.replace(/[^a-zA-Z0-9]/g,'_')}_${q.date||'sin-fecha'}.pdf`;
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ title: `Cotizacion DELSO - ${q.client}`, files: [file] });
+      const idx = quotes.findIndex(x => x.id === q.id);
+      if (idx >= 0) { quotes[idx].pdfSent = true; localStorage.setItem('delso_quotes', JSON.stringify(quotes)); }
+      toast('PDF compartido');
+      return;
+    } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  // Fallback: download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('PDF descargado');
+}
+
+// ════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════
 const DEFAULT_CONFIG={basePrice:15000,perStop:600,instLow:1000,instMid:800,instHigh:500,articles:[
-  {id:'a1',name:'Cabina moderna',price:700},{id:'a2',name:'Puerta automática',price:1200},
-  {id:'a3',name:'Espejo panorámico',price:350},{id:'a4',name:'Iluminación LED',price:250},
+  {id:'a1',name:'Cabina moderna',price:700},{id:'a2',name:'Puerta automatica',price:1200},
+  {id:'a3',name:'Espejo panoramico',price:350},{id:'a4',name:'Iluminacion LED',price:250},
   {id:'a5',name:'Piso de acero inoxidable',price:400},{id:'a6',name:'Sistema de emergencia',price:800}
 ]};
 let config=JSON.parse(localStorage.getItem('delso_config'))||JSON.parse(JSON.stringify(DEFAULT_CONFIG));
 let quotes=JSON.parse(localStorage.getItem('delso_quotes'))||[];
 let stops=2,selectedExtras={},viewingQuoteId=null;
 
-// ═══ HELPERS ═══
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
 function switchPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.tab-btn')[['quote','history','config'].indexOf(p)].classList.add('active');if(p==='history')renderHistory();if(p==='config')loadConfig()}
 function openModal(id){document.getElementById(id).classList.add('active')}
@@ -218,13 +472,11 @@ function closeModal(id){document.getElementById(id).classList.remove('active')}
 document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active')})});
 const fmt=n=>'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
 
-// ═══ CALCULATIONS ═══
 function calcBase(){return config.basePrice+Math.max(0,stops-2)*config.perStop}
 function calcInstall(){let r=stops<=4?config.instLow:stops===5?config.instMid:config.instHigh;return stops*r}
 function calcExtrasTotal(){return Object.values(selectedExtras).reduce((s,e)=>s+Number(e.price),0)}
 function calcTotal(){return calcBase()+calcInstall()+calcExtrasTotal()}
 
-// ═══ UI ═══
 function update(){
   document.getElementById('stop-count').textContent=stops;
   document.getElementById('badge-paradas').textContent=stops+' parada'+(stops!==1?'s':'');
@@ -239,7 +491,6 @@ function update(){
   renderExtrasSelector()
 }
 function changeStops(d){stops=Math.max(2,stops+d);update()}
-
 function renderExtrasSelector(){
   const l=document.getElementById('extras-list');
   if(!config.articles.length){l.innerHTML='<p style="color:var(--text-dim);font-size:13px;padding:8px 0">No hay artículos.</p>';return}
@@ -249,139 +500,28 @@ function addExtraToQuote(){const n=document.getElementById('extra-name').value.t
   if(!config.articles.find(a=>a.name.toLowerCase()===n.toLowerCase())){config.articles.push({id:'a'+Date.now(),name:n,price:p});localStorage.setItem('delso_config',JSON.stringify(config))}
   selectedExtras['custom_'+Date.now()]={name:n,price:p};document.getElementById('extra-name').value='';document.getElementById('extra-price').value='';closeModal('modal-add-extra');update()}
 function resetQuote(){stops=2;selectedExtras={};document.getElementById('q-client').value='';document.getElementById('q-phone').value='';document.getElementById('q-notes').value='';document.getElementById('q-date').value=new Date().toISOString().slice(0,10);update()}
-
 function buildQuoteData(){
-  const lines=[];
-  lines.push({name:`Ascensor (${stops} paradas)`,amount:calcBase()});
-  lines.push({name:'Instalación',amount:calcInstall()});
+  const lines=[];lines.push({name:`Ascensor (${stops} paradas)`,amount:calcBase()});
+  lines.push({name:'Instalacion',amount:calcInstall()});
   for(const ex of Object.values(selectedExtras))lines.push({name:ex.name,amount:Number(ex.price)});
   return{id:'q_'+Date.now(),client:document.getElementById('q-client').value.trim()||'Sin nombre',phone:document.getElementById('q-phone').value.trim(),date:document.getElementById('q-date').value,notes:document.getElementById('q-notes').value.trim(),stops,lines,total:calcTotal(),createdAt:new Date().toISOString(),pdfSent:false}
 }
+function saveQuote(){const q=buildQuoteData();quotes.unshift(q);localStorage.setItem('delso_quotes',JSON.stringify(quotes));toast('Cotización guardada')}
+function saveAndPDF(){const q=buildQuoteData();quotes.unshift(q);localStorage.setItem('delso_quotes',JSON.stringify(quotes));sharePDF(q)}
+function historyPDF(){const q=quotes.find(x=>x.id===viewingQuoteId);if(q)sharePDF(q)}
 
-// ═══ SAVE (always works) ═══
-function saveQuote(){
-  const q=buildQuoteData();quotes.unshift(q);localStorage.setItem('delso_quotes',JSON.stringify(quotes));
-  toast('Cotización guardada');
-}
-
-// ═══ PDF ═══
-function drawLogo(doc,x,y){
-  doc.setFont('helvetica','bold');doc.setFontSize(28);
-  doc.setTextColor(158,158,158);doc.text('DEL',x,y);
-  doc.setTextColor(244,121,32);doc.text('SO',x+33,y);
-}
-
-function generatePDF(q){
-  const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4'});
-  const W=210,H=297,ml=20,mr=20,cw=W-ml-mr;
-  let y=0;
-
-  doc.setFillColor(22,22,22);doc.rect(0,0,W,42,'F');
-  drawLogo(doc,ml,28);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(140,140,140);doc.text('Venta e Instalación de Ascensores',ml,35);
-  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(244,121,32);doc.text('COTIZACIÓN',W-mr,15,{align:'right'});
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(200,200,200);
-  doc.text('#'+q.id.replace('q_','').slice(-6).toUpperCase(),W-mr,21,{align:'right'});
-  doc.text(q.date||'Sin fecha',W-mr,27,{align:'right'});
-  y=52;
-
-  doc.setFillColor(245,243,238);doc.roundedRect(ml,y,cw,q.phone?26:22,3,3,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(140,140,140);doc.text('CLIENTE',ml+8,y+8);
-  doc.setFontSize(13);doc.setTextColor(30,30,30);doc.text(q.client,ml+8,y+16);
-  if(q.phone){doc.setFontSize(9);doc.setTextColor(100,100,100);doc.text('Tel: '+q.phone,ml+8,y+22)}
-  y+=q.phone?36:32;
-
-  doc.setFillColor(244,121,32);doc.roundedRect(ml,y,cw,10,2,2,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255,255,255);
-  doc.text('DESCRIPCIÓN',ml+8,y+7);doc.text('MONTO',W-mr-8,y+7,{align:'right'});
-  y+=14;
-
-  doc.setFont('helvetica','normal');
-  q.lines.forEach((line,i)=>{
-    if(i%2===0){doc.setFillColor(250,249,246);doc.rect(ml,y-4,cw,10,'F')}
-    doc.setFontSize(10);doc.setTextColor(60,60,60);doc.text(line.name,ml+8,y+2);
-    doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);doc.text(fmt(line.amount),W-mr-8,y+2,{align:'right'});
-    doc.setFont('helvetica','normal');y+=10;
-  });
-
-  y+=4;doc.setDrawColor(244,121,32);doc.setLineWidth(0.8);doc.line(ml,y,W-mr,y);y+=10;
-  doc.setFillColor(22,22,22);doc.roundedRect(W-mr-74,y-5,74,16,4,4,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(244,121,32);doc.text('TOTAL',W-mr-66,y+5);
-  doc.setFontSize(16);doc.setTextColor(255,255,255);doc.text(fmt(q.total),W-mr-6,y+6,{align:'right'});
-  y+=24;
-
-  if(q.notes){doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(140,140,140);doc.text('OBSERVACIONES',ml,y);y+=5;
-    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(80,80,80);const nl=doc.splitTextToSize(q.notes,cw);doc.text(nl,ml,y);y+=nl.length*5+10}
-
-  const fy=H-16;doc.setDrawColor(220,220,220);doc.setLineWidth(0.3);doc.line(ml,fy,W-mr,fy);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(160,160,160);
-  doc.text('DELSO — Venta e Instalación de Ascensores',ml,fy+6);
-  doc.text('Cotización válida por 30 días',ml,fy+10);
-  doc.text('Página 1 de 1',W-mr,fy+6,{align:'right'});
-  return doc;
-}
-
-async function createAndSharePDF(q) {
-  // Ensure jsPDF is loaded
-  if (!window.jspdf) {
-    toast('Cargando generador de PDF...');
-    try {
-      await loadJsPDF();
-    } catch(e) {
-      toast('Necesitas conexión a internet para generar el PDF');
-      return;
-    }
-  }
-
-  const doc = generatePDF(q);
-  const blob = doc.output('blob');
-  const filename = `Cotizacion_DELSO_${q.client.replace(/[^a-zA-Z0-9]/g,'_')}_${q.date||'sin-fecha'}.pdf`;
-  const file = new File([blob], filename, {type:'application/pdf'});
-
-  if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
-    try {
-      await navigator.share({ title:`Cotización DELSO - ${q.client}`, files:[file] });
-      const idx = quotes.findIndex(x=>x.id===q.id);
-      if(idx>=0){quotes[idx].pdfSent=true;localStorage.setItem('delso_quotes',JSON.stringify(quotes))}
-      toast('PDF compartido');
-    } catch(e) {
-      if(e.name!=='AbortError') { doc.save(filename); toast('PDF descargado'); }
-    }
-  } else {
-    doc.save(filename);
-    toast('PDF descargado');
-  }
-}
-
-function saveAndPDF(){
-  const q=buildQuoteData();quotes.unshift(q);localStorage.setItem('delso_quotes',JSON.stringify(quotes));
-  createAndSharePDF(q);
-}
-
-function historyPDF(){
-  const q=quotes.find(x=>x.id===viewingQuoteId);
-  if(q) createAndSharePDF(q);
-}
-
-// ═══ HISTORY ═══
 function renderHistory(){
   const l=document.getElementById('history-list');
   if(!quotes.length){l.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6"/></svg><p>Aún no hay cotizaciones</p></div>`;return}
-  l.innerHTML=quotes.map(q=>{
-    const sc=q.pdfSent?'status-sent':'status-saved';
-    const st=q.pdfSent?'PDF enviado':'Guardada';
+  l.innerHTML=quotes.map(q=>{const sc=q.pdfSent?'status-sent':'status-saved';const st=q.pdfSent?'PDF enviado':'Guardada';
     return`<div class="quote-card" onclick="viewQuote('${q.id}')"><div class="quote-card-top"><span class="quote-card-client">${q.client}</span><span class="quote-card-total">${fmt(q.total)}</span></div><div class="quote-card-bottom"><span class="status-dot ${sc}"></span>${st} · ${q.date||'Sin fecha'} · ${q.stops} paradas</div></div>`}).join('')}
-
 function viewQuote(id){
   const q=quotes.find(x=>x.id===id);if(!q)return;viewingQuoteId=id;
   const rows=q.lines.map(l=>`<div class="line-item"><span class="line-item-name">${l.name}</span><span class="line-item-val">${fmt(l.amount)}</span></div>`).join('');
   document.getElementById('view-quote-container').innerHTML=`<div class="card" style="margin:0"><div class="card-label" style="margin-bottom:8px">${q.client}${q.phone?' · '+q.phone:''}</div><div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">${q.date||'Sin fecha'} · ${q.stops} paradas</div>${rows}<div class="total-row"><span class="total-label">Total</span><span class="total-val">${fmt(q.total)}</span></div>${q.notes?'<p style="margin-top:10px;color:var(--text-dim);font-size:12px">Notas: '+q.notes+'</p>':''}</div>`;
   openModal('modal-view-quote')}
-
 function deleteQuote(){if(!viewingQuoteId||!confirm('¿Eliminar esta cotización?'))return;quotes=quotes.filter(q=>q.id!==viewingQuoteId);localStorage.setItem('delso_quotes',JSON.stringify(quotes));viewingQuoteId=null;closeModal('modal-view-quote');renderHistory();toast('Eliminada')}
 
-// ═══ CONFIG + PRICE SYNC ═══
 function loadConfig(){document.getElementById('cfg-base').value=config.basePrice;document.getElementById('cfg-per-stop').value=config.perStop;document.getElementById('cfg-inst-low').value=config.instLow;document.getElementById('cfg-inst-mid').value=config.instMid;document.getElementById('cfg-inst-high').value=config.instHigh;renderConfigExtras()}
 function renderConfigExtras(){
   const l=document.getElementById('config-extras-list');
@@ -390,7 +530,6 @@ function renderConfigExtras(){
 function updateArticlePrice(id,v){const a=config.articles.find(x=>x.id===id);if(a)a.price=parseFloat(v)||0}
 function removeArticle(id){config.articles=config.articles.filter(a=>a.id!==id);delete selectedExtras[id];renderConfigExtras()}
 function addNewArticle(){const n=document.getElementById('new-art-name').value.trim(),p=parseFloat(document.getElementById('new-art-price').value);if(!n||isNaN(p))return;config.articles.push({id:'a'+Date.now(),name:n,price:p});document.getElementById('new-art-name').value='';document.getElementById('new-art-price').value='';closeModal('modal-new-article');renderConfigExtras()}
-
 function saveConfig(){
   config.basePrice=parseFloat(document.getElementById('cfg-base').value)||15000;
   config.perStop=parseFloat(document.getElementById('cfg-per-stop').value)||600;
@@ -398,16 +537,10 @@ function saveConfig(){
   config.instMid=parseFloat(document.getElementById('cfg-inst-mid').value)||800;
   config.instHigh=parseFloat(document.getElementById('cfg-inst-high').value)||500;
   localStorage.setItem('delso_config',JSON.stringify(config));
-  // Sync selected extras with updated article prices
-  for(const[id,ex] of Object.entries(selectedExtras)){
-    const updated=config.articles.find(a=>a.name===ex.name);
-    if(updated) selectedExtras[id].price=updated.price;
-  }
-  update();
-  toast('Configuración guardada');
+  for(const[id,ex] of Object.entries(selectedExtras)){const u=config.articles.find(a=>a.name===ex.name);if(u)selectedExtras[id].price=u.price}
+  update();toast('Configuración guardada')
 }
 
-// ═══ INIT ═══
 document.getElementById('q-date').value=new Date().toISOString().slice(0,10);
 update();
 </script>
